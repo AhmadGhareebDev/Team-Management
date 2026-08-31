@@ -7,4 +7,6 @@ export {
     emailValidator ,
     type EmailValidatorSchemaType ,
     passwordValidator ,
-    type PasswordValidatorSchemaType  } from "./user"
+    type PasswordValidatorSchemaType ,
+    updateProfileSchema ,
+    type UpdateProfileSchemaType  } from "./user"

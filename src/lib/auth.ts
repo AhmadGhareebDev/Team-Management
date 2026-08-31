@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { emailOTP } from "better-auth/plugins"
 import * as schema from "@/db/schemas";
 import { sendEmail } from "@/lib/mailer";
+import { imagekit } from "@/lib/imagekit";
 
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
@@ -22,7 +23,8 @@ export const auth = betterAuth({
             max: 1,
         }
     },
-},
+    },
+ 
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: true,
@@ -89,6 +91,24 @@ export const auth = betterAuth({
                 required: true,
                 unique: true,
             },
+            avatar_url: {
+                type: "string",
+                required: false,
+                },
+            avatar_file_id: {
+                type: "string",
+                required: false,
+                },
+        },
+        deleteUser:{
+            enabled: true,
+            afterDelete: async (user) => {
+            try {
+            await imagekit.deleteFolder(`avatars/${user.id}`)
+            } catch (e) {
+            console.error("Failed to delete ImageKit folder:", e)
+            }
+        },
         }
     }
 });

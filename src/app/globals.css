@@ -2,6 +2,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   --background: oklch(1.0000 0 0);
   --foreground: oklch(0.1448 0 0);

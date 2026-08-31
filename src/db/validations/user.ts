@@ -34,9 +34,15 @@ export const passwordValidator = z.object({
     password: z.string().min(8 , "Password must be at least 8 characters long").max(100 , "Password must be at most 100 characters long")
 });
 
+export const updateProfileSchema = insertSignUpUserSchema.pick({
+    name: true,
+    username: true,
+});
+
 
 export type SelectUserSchemaType = z.infer<typeof selectUserSchema>;
 export type InsertLoginUserSchemaType = z.infer<typeof insertLoginUserSchema>;
 export type InsertSignUpUserSchemaType = z.infer<typeof insertSignUpUserSchema>;
 export type EmailValidatorSchemaType = z.infer<typeof emailValidator>;
 export type PasswordValidatorSchemaType = z.infer<typeof passwordValidator>;
+export type UpdateProfileSchemaType = z.infer<typeof updateProfileSchema>;
