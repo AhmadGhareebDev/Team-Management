@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { Image, buildSrc } from "@imagekit/next"
+import { ImageKitImage } from "@/components/web/ImageKitImage"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
@@ -18,8 +17,6 @@ export function ImageKitAvatar({
   size: number
   className?: string
 }) {
-  const [loaded, setLoaded] = useState(false)
-
   if (!src) {
     return (
       <Avatar className={className}>
@@ -28,30 +25,14 @@ export function ImageKitAvatar({
     )
   }
 
-  const placeholder = buildSrc({
-    urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT!,
-    src,
-    transformation: [{ quality: 10, blur: 70 }],
-  })
-
   return (
-    <Image
+    <ImageKitImage
       src={src}
       alt={alt}
       width={size * 2}
       height={size * 2}
       transformation={[{ width: size * 2, height: size * 2, quality: 80 }]}
-      style={
-        loaded
-          ? undefined
-          : {
-              backgroundImage: `url(${placeholder})`,
-              backgroundSize: "cover",
-              backgroundRepeat: "no-repeat",
-            }
-      }
-      onLoad={() => setLoaded(true)}
-      className={cn("shrink-0 rounded-full border border-border object-cover", className)}
+      className={cn("shrink-0 rounded-full border border-border", className)}
     />
   )
 }

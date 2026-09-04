@@ -1,5 +1,9 @@
 import { relations } from "drizzle-orm";
-import { notification, projectMembers, workspaceMembers , subtask, workspaceInvitation } from "@/db/schemas";
+import { notification } from "@/db/schemas/notification";
+import { projectMembers } from "@/db/schemas/projectMembers";
+import { workspaceMembers } from "@/db/schemas/workspaceMembers";
+import { subtask } from "@/db/schemas/subtasks";
+import { workspaceInvitation } from "@/db/schemas/workspaceInvitation";
 import {
   pgTable,
   text,

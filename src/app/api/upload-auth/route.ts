@@ -1,5 +1,8 @@
 import { getUploadAuthParams } from "@imagekit/next/server"
 import { auth } from "@/lib/auth"
+import { db } from "@/db"
+import { workspaceMembers } from "@/db/schemas/workspaceMembers"
+import { eq, and } from "drizzle-orm"
 import { headers } from "next/headers"
 
 export async function GET(request: Request) {
@@ -15,13 +18,40 @@ export async function GET(request: Request) {
         return Response.json({ error: "folder query parameter is required" }, { status: 400 })
     }
 
-    const allowedPrefix = `avatars/${session.user.id}`
-    const isAllowed = folder === allowedPrefix || folder.startsWith(allowedPrefix + "/")
+    const avatarPrefix = `avatars/${session.user.id}`
+    const isAvatarAllowed = folder === avatarPrefix || folder.startsWith(avatarPrefix + "/")
 
-    if (!isAllowed) {
-        return Response.json({ error: "folder is not allowed for this user" }, { status: 400 })
+    if (isAvatarAllowed) {
+        return issueAuthParams(folder)
     }
 
+    const coverMatch = folder.match(/^workspaces\/([^/]+)\/cover-image$/)
+    if (coverMatch) {
+        const workspaceId = coverMatch[1]
+
+        const membership = await db.query.workspaceMembers.findFirst({
+            where: and(
+                eq(workspaceMembers.workspaceId, workspaceId),
+                eq(workspaceMembers.userId, session.user.id)
+            )
+        })
+
+        if (!membership) {
+            return Response.json({ error: "folder is not allowed for this user" }, { status: 400 })
+        }
+
+        const canEdit = membership.role === "owner" || membership.role === "admin"
+        if (!canEdit) {
+            return Response.json({ error: "folder is not allowed for this user" }, { status: 400 })
+        }
+
+        return issueAuthParams(folder)
+    }
+
+    return Response.json({ error: "folder is not allowed for this user" }, { status: 400 })
+}
+
+function issueAuthParams(folder: string) {
     const { token, expire, signature } = getUploadAuthParams({
         privateKey: process.env.IMAGEKIT_PRIVATE_KEY as string,
         publicKey: process.env.IMAGEKIT_PUBLIC_KEY as string,

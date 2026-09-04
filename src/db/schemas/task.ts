@@ -1,6 +1,10 @@
 import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
-import { user, project, taskAssignees , taskDependencies , subtask } from "@/db/schemas";
+import { user } from "@/db/schemas/auth-schema";
+import { project } from "@/db/schemas/project";
+import { taskAssignees } from "@/db/schemas/taskAssignees";
+import { taskDependencies } from "@/db/schemas/taskDependencies";
+import { subtask } from "@/db/schemas/subtasks";
 
 
 export const taskStatusEnum = pgEnum("task_status", [

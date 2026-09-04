@@ -3,6 +3,7 @@ import { AppSidebar } from "./_components/app-sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Navbar } from "@/components/web/Navbar"
 
+
 export default function DashboardLayout({
   children,
 }: {
@@ -13,7 +14,7 @@ export default function DashboardLayout({
       <AppSidebar />
       <SidebarInset>
         <Navbar withSidebarTrigger />
-        <main className="flex-1 p-4">
+        <main className="flex-1 p-6">
           <TooltipProvider>
             {children}
           </TooltipProvider>

@@ -9,7 +9,12 @@ const playfairDisplayHeading = Playfair_Display({subsets:['latin'],variable:'--f
 import { ImageKitProvider } from "@imagekit/next";
 
 const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
+import { Alexandria } from "next/font/google";
 
+const fontSans = Alexandria({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -32,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", notoSans.variable, playfairDisplayHeading.variable)}
     >
-      <body className="min-h-full flex flex-col">
+      <body className={cn(`min-h-full flex flex-col ${fontSans.variable} antialiased`)}>
      <ImageKitProvider urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT!}>
         <ThemeProvider>
           <TooltipProvider>

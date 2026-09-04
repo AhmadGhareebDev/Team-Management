@@ -1,6 +1,7 @@
 import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { task, user } from "@/db/schemas";
+import { task } from "@/db/schemas/task";
+import { user } from "@/db/schemas/auth-schema";
 
 export const subtask = pgTable("subtask", {
   id: text("id").primaryKey(),

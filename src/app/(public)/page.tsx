@@ -1,5 +1,6 @@
 import { AnimatedBars } from "@/components/grootstudio/animated-bars"
 import TextFrameWrapper from "@/components/grootstudio/text-frame-wraper"
+
 export default function LandingPage() {
   return (
     <div className="">

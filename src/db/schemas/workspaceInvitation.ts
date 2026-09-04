@@ -1,6 +1,7 @@
 import { pgTable, text, timestamp, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { workspace, user } from "@/db/schemas";
+import { workspace } from "@/db/schemas/workspace"
+import { user } from "@/db/schemas/auth-schema"
 
 export const invitationStatusEnum = pgEnum("invitation_status", [
   "pending",

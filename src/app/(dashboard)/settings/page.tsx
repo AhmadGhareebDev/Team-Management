@@ -9,7 +9,9 @@ import {
 import { Suspense } from "react"
 import DeleteUserAccount from "./_components/DeleteUserAccount"
 import UpdateProfileForm from "./_components/UpdateProfileForm"
+import { ResetPasswordForm } from "./_components/ResetPasswordForm"
 import { AvatarUploader } from "./_components/AvatarUploader"
+import { RequestPasswordReset } from "./_components/RequestPasswordReset"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 
@@ -29,6 +31,38 @@ export default async function SettingsPage() {
 
       <div className="grid items-start gap-6 md:grid-cols-[1fr_360px]">
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Security</CardTitle>
+              <CardDescription>
+                Manage your password and account security settings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <div className="space-y-3">
+                <h3 className="text-md font-bold mb-10 text-secondary-foreground">
+                  Change password
+                </h3>
+                <ResetPasswordForm />
+              </div>
+              <div className="py-15 border-t border-b mt-20">
+                 <div className="space-y-3">
+                <div className="space-y-1">
+                  <h3 className="text-md font-bold mb-10 text-secondary-foreground">
+                    Forgot password ?
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    We will email you a link to reset your password. Follow the
+                    instructions in that email to create a new one.
+                  </p>
+                </div>
+                  <RequestPasswordReset />
+              </div>  
+              </div>
+             
+            </CardContent>
+          </Card>
+
           <Card className="border-destructive/50">
             <CardHeader>
               <CardTitle className="text-destructive">Danger zone</CardTitle>
@@ -51,7 +85,7 @@ export default async function SettingsPage() {
           
         </div>
 
-        <div className="space-y-6 self-start md:sticky md:top-6">
+        <div className="space-y-6 self-start md:sticky md:top-20">
           <Card>
             <CardHeader>
               <CardTitle>Profile</CardTitle>

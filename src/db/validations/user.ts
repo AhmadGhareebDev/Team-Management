@@ -39,6 +39,12 @@ export const updateProfileSchema = insertSignUpUserSchema.pick({
     username: true,
 });
 
+export const resetPasswordSchema = z.object({
+    currentPassword: z.string().min(8 , "Current password must be at least 8 characters long").max(100 , "Current password must be at most 100 characters long"),
+    newPassword: z.string().min(8 , "New password must be at least 8 characters long").max(100 , "New password must be at most 100 characters long"),
+})
+
+
 
 export type SelectUserSchemaType = z.infer<typeof selectUserSchema>;
 export type InsertLoginUserSchemaType = z.infer<typeof insertLoginUserSchema>;
@@ -46,3 +52,4 @@ export type InsertSignUpUserSchemaType = z.infer<typeof insertSignUpUserSchema>;
 export type EmailValidatorSchemaType = z.infer<typeof emailValidator>;
 export type PasswordValidatorSchemaType = z.infer<typeof passwordValidator>;
 export type UpdateProfileSchemaType = z.infer<typeof updateProfileSchema>;
+export type ResetPasswordSchemaType = z.infer<typeof resetPasswordSchema>;

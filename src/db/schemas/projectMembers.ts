@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import { pgTable, text ,timestamp } from "drizzle-orm/pg-core";
-import { user , project } from "@/db/schemas"
+import { user } from "@/db/schemas/auth-schema"
+import { project } from "@/db/schemas/project"
 
 
 export const projectMembers = pgTable("project_members", {

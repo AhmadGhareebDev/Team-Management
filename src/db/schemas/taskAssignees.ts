@@ -1,6 +1,6 @@
 import { pgTable , text , timestamp , uniqueIndex } from "drizzle-orm/pg-core";
-import { task } from "@/db/schemas";
-import { user } from "@/db/schemas";
+import { task } from "@/db/schemas/task";
+import { user } from "@/db/schemas/auth-schema";
 import { relations } from "drizzle-orm";
 
 

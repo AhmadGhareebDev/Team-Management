@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { workspace } from "@/db/schemas";
 import { relations } from "drizzle-orm";
-import { projectMembers } from "@/db/schemas";
+import { workspace } from "@/db/schemas/workspace";
+import { projectMembers } from "@/db/schemas/projectMembers";
 export const project = pgTable("project", {
     id: text("id").primaryKey(),
     workspaceId: text("workspace_id").notNull().references(() => workspace.id, { onDelete: "cascade" }),

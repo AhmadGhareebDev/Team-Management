@@ -1,5 +1,5 @@
 import { pgTable , text , timestamp } from "drizzle-orm/pg-core";
-import { task } from "@/db/schemas";
+import { task } from "@/db/schemas/task";
 import { relations } from "drizzle-orm";
 
 

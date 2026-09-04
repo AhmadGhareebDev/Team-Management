@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
-import { user } from "@/db/schemas"
+import { user } from "@/db/schemas/auth-schema"
 import { relations } from "drizzle-orm";
 export const notificationTypeEnum = pgEnum("notification_type", [
   "task_assigned",

@@ -9,7 +9,7 @@ export default function TextFrameWrapper() {
             <h1 className='text-7xl max-w-3xl'>
                 <TextFrame className="[&_svg]:text-blue-400 dark:text-blue-300 text-white" lineStyle="solid">Team Management</TextFrame>
             </h1>
-            <Button onClick={() => router.push("/dashboard")} className="mt-10 text-white font-bold hover:text-black dark:hover:text-white dark:hover:bg-black" variant="outline">Get Started</Button>
+            <Button onClick={() => router.push("/workspaces")} className="mt-10 text-white font-bold hover:text-black dark:hover:text-white dark:hover:bg-black" variant="outline">Get Started</Button>
         </div>
     );
 }

@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, pgEnum , uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { workspace } from "@/db/schemas";
-import { user } from "@/db/schemas";
+import { workspace } from "@/db/schemas/workspace";
+import { user } from "@/db/schemas/auth-schema";
 
 
 export const workspaceRoleEnum = pgEnum("workspace_role", ["owner", "admin", "member"]);

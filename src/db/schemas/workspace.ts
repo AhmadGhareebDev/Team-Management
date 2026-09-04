@@ -1,6 +1,8 @@
 import { pgTable, text, varchar ,timestamp } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { project , workspaceInvitation, workspaceMembers } from "@/db/schemas";
+import { project } from "@/db/schemas/project";
+import { workspaceInvitation } from "@/db/schemas/workspaceInvitation";
+import { workspaceMembers } from "@/db/schemas/workspaceMembers";
 
 export const workspace = pgTable("workspace", {
     id: text("id").primaryKey(),
@@ -9,8 +11,9 @@ export const workspace = pgTable("workspace", {
     cover_file_id: text("cover_file_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
-        .$onUpdate(() => new Date())
-        .notNull(),
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 })
 
 export const workspaceRelations = relations(workspace, ({ many }) => ({
