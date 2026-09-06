@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ThemeProvider } from "@/components/web/theme-provider"
+import { AuthGateProvider } from "@/components/web/AuthGateProvider"
 const playfairDisplayHeading = Playfair_Display({subsets:['latin'],variable:'--font-heading'});
 import { ImageKitProvider } from "@imagekit/next";
 
@@ -41,7 +42,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
      <ImageKitProvider urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT!}>
         <ThemeProvider>
           <TooltipProvider>
-            {children}
+            <AuthGateProvider>
+              {children}
+            </AuthGateProvider>
           </TooltipProvider>
           <Toaster/>
         </ThemeProvider>

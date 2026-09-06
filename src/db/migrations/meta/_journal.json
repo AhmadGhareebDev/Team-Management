@@ -15,6 +15,13 @@
       "when": 1788354756314,
       "tag": "0001_quiet_hitman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788697657087,
+      "tag": "0002_known_slyde",
+      "breakpoints": true
     }
   ]
 }

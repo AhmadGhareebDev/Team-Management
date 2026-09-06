@@ -1,9 +1,16 @@
 import { WorkspaceProjectWithMembers } from "@/db/queries/workspaces"
-import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar"
+import { AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription } from "@/components/ui/card"
 import { ImageKitImage } from "@/components/web/ImageKitImage"
+import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
 import { ImageDown } from "lucide-react"
+
+const MAX_AVATARS = 4
+
 export default function ProjectCard({ project }: { project: WorkspaceProjectWithMembers }) {
+  const shownMembers = project.members.slice(0, MAX_AVATARS)
+  const hiddenCount = project.members.length - shownMembers.length
+
   return (
     <Card className="relative overflow-hidden">
       {project.cover_url ? (
@@ -20,19 +27,23 @@ export default function ProjectCard({ project }: { project: WorkspaceProjectWith
           {project.name}
         </CardDescription>
         <AvatarGroup>
-          {project.members.map((m) => (
-            <Avatar key={m.user.id} size="sm">
-              <AvatarFallback>
-                {m.user.name
-                  .split(" ")
-                  .map((w) => w[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+          {shownMembers.map((m) => (
+            <ImageKitAvatar
+              key={m.user.id}
+              src={m.user.avatar_url}
+              alt={m.user.name}
+              initials={m.user.name
+                .trim()
+                .split(/\s+/)
+                .map((w) => w[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()}
+              size={24}
+              className="size-6!"
+            />
           ))}
-          <AvatarGroupCount>+4</AvatarGroupCount>
+          {hiddenCount > 0 && <AvatarGroupCount>+{hiddenCount}</AvatarGroupCount>}
         </AvatarGroup>
       </CardContent>
     </Card>

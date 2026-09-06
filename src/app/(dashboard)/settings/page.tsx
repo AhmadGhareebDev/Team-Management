@@ -14,12 +14,23 @@ import { AvatarUploader } from "./_components/AvatarUploader"
 import { RequestPasswordReset } from "./_components/RequestPasswordReset"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
+import  Link  from "next/link"
+import { Button } from "@/components/ui/button"
 
 export const instant = false
 
 export default async function SettingsPage() {
-  const session = await auth.api.getSession({ headers: await headers() })
-
+const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) {
+    return (
+      <div className="col-span-full h-screen flex flex-col items-center justify-center gap-4 py-16">
+        <p className="text-sm text-muted-foreground">You need to be logged in to Manage your settings.</p>
+        <Link href="/auth/login">
+          <Button>Log in</Button>
+        </Link>
+      </div>
+    )
+  }
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="space-y-1">

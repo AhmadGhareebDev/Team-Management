@@ -19,3 +19,7 @@ export {
   selectWorkspaceSchema,
   type SelectWorkspaceSchemaType,
 } from "./workspace"
+export {
+  insertProjectSchema,
+  type InsertProjectSchemaType,
+} from "./project"

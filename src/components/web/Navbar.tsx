@@ -6,12 +6,16 @@ import { useTransition } from "react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { NotificationsDropdown } from "./NotificationsDropdown"
+import type { Notification } from "@/db/queries/notifications"
 import { authClient } from "@/lib/auth-client"
 
 export function Navbar({
   withSidebarTrigger = false,
+  notifications = [],
 }: {
   withSidebarTrigger?: boolean
+  notifications?: Notification[]
 }) {
   const router = useRouter()
   const { data: session, isPending } = authClient.useSession()
@@ -39,6 +43,7 @@ export function Navbar({
           <Spinner className="size-4" />
         ) : session ? (
           <>
+            <NotificationsDropdown notifications={notifications} />
             <ModeToggle />
             <Button
               variant="outline"

@@ -1,22 +1,35 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+"use client"
+import { Crown, EllipsisVertical, ShieldCheck, Trash2 } from "lucide-react"
+import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { WorkspaceMemberWithUser } from "@/db/queries/workspaces"
 import { cn } from "@/lib/utils"
 export default function MemberRow({ member }: { member: WorkspaceMemberWithUser }) {
+    const initials = member.user.name
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
     return (
         <div
                   key={member.user.id}
                   className="flex items-center gap-3 p-3"
                 >
-                  <Avatar>
-                    <AvatarFallback>
-                      {member.user.name
-                        .split(" ")
-                        .map((w) => w[0])
-                        .join("")
-                        .slice(0, 2)
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <ImageKitAvatar
+                    src={member.user.avatar_url}
+                    alt={member.user.name}
+                    initials={initials}
+                    size={32}
+                    className="size-8!"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">
                       {member.user.name}
@@ -26,6 +39,34 @@ export default function MemberRow({ member }: { member: WorkspaceMemberWithUser 
                     </p>
                   </div>
                   <RoleBadge role={member.role} />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          className="border-0"
+                          aria-label={`Actions for ${member.user.name}`}
+                        />
+                      }
+                    >
+                      <EllipsisVertical />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem>
+                        <ShieldCheck />
+                        Make admin
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Crown />
+                        Make owner
+                      </DropdownMenuItem>
+                      <DropdownMenuItem variant="destructive">
+                        <Trash2 />
+                        Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
     )
 }

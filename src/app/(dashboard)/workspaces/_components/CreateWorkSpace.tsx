@@ -10,6 +10,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
+import { useAuthGate } from "@/components/web/AuthGateProvider"
 import {
   insertWorkspaceSchema,
   type InsertWorkspaceSchemaType,
@@ -17,6 +18,7 @@ import {
 
 export function CreateWorkSpace() {
   const router = useRouter()
+  const { require } = useAuthGate()
   const form = useForm<InsertWorkspaceSchemaType>({
     resolver: zodResolver(insertWorkspaceSchema),
     mode: "onSubmit",
@@ -28,37 +30,38 @@ export function CreateWorkSpace() {
   const [open, setOpen] = useState(false)
 
   const onSubmit = (data: InsertWorkspaceSchemaType) => {
-    startTransition(async () => {
-      const result = await createWorkspace(data);
+    require({
+      onAllowed: () => {
+        startTransition(async () => {
+          const result = await createWorkspace(data)
 
-      if (result?.error) {
-        if (result.error === "UNAUTHENTICATED") {
-          form.setError("root", {message: "You must be logged in to create a workspace."});
-          return
-        }
-        if(result.error === "INVALID_DATA") {
-          form.setError("root", {message: "Invalid data. Please check your input."});
-          return
-        }
-        if (result.error === "INTERNAL_ERROR") {
-          form.setError("root" , {message: "Something went wrong , please try again later."})
-          return
-        }
-      }
+          if (result?.error) {
+            if (result.error === "UNAUTHENTICATED") {
+              form.setError("root", { message: "You must be logged in to create a workspace." })
+              return
+            }
+            if (result.error === "INVALID_DATA") {
+              form.setError("root", { message: "Invalid data. Please check your input." })
+              return
+            }
+            if (result.error === "INTERNAL_ERROR") {
+              form.setError("root", { message: "Something went wrong , please try again later." })
+              return
+            }
+          }
 
-      if (result?.success) {
-        form.reset()
-        setOpen(false)
-        toast.add({
-          type: "success",
-          description: "Workspace created successfully!",
+          if (result?.success) {
+            form.reset()
+            setOpen(false)
+            toast.add({
+              type: "success",
+              description: "Workspace created successfully!",
+            })
+            router.refresh()
+          }
         })
-        router.refresh()
-      }
-
-
+      },
     })
-
   }
 
   return (

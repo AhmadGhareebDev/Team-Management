@@ -2,18 +2,24 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "./_components/app-sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Navbar } from "@/components/web/Navbar"
+import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
+import { getUserNotifications } from "@/db/queries/notifications"
 
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await auth.api.getSession({ headers: await headers() })
+  const notifications = session ? await getUserNotifications(session.user.id) : []
+
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <Navbar withSidebarTrigger />
+        <Navbar withSidebarTrigger notifications={notifications} />
         <main className="flex-1 p-6">
           <TooltipProvider>
             {children}

@@ -5,12 +5,11 @@ import Link from "next/link"
 import {
   Card,
 } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { getWorkspaceById, getUserWorkspaceRole } from "@/db/queries/workspaces"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 
-import CreateProject from "../_components/CreateProject"
+import { CreateProject } from "../_components/CreateProject"
 import InviteUser from "../_components/InviteUser"
 import ProjectList from "../_components/ProjectsList"
 import WorkspaceMembersList from "../_components/WorkspaceMembersList"
@@ -26,7 +25,6 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
   const { workspaceId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
   const role = session ? await getUserWorkspaceRole(workspaceId, session.user.id) : null;
-  const canEdit = role === "owner" || role === "admin";
   const workspace = await getWorkspaceById(workspaceId);
   if (!workspace) {
     return (
@@ -45,8 +43,8 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
                     Go Back
                 </Link>
             </div>
-      <div className="group relative">
-        <div className="relative aspect-4/1 w-full overflow-hidden rounded-lg bg-muted">
+      <div className="relative">
+        <div className="group relative aspect-4/1 w-full overflow-hidden rounded-lg bg-muted">
           {workspace.cover_url ? (
             <ImageKitImage
               src={workspace.cover_url}
@@ -59,7 +57,7 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
           ) : null}
           <SetWorkspaceCover
             workspaceId={workspaceId}
-            canEdit={canEdit}
+            role={role}
             className={
               workspace.cover_url
                 ? "absolute inset-0 rounded-lg opacity-0 transition-opacity duration-200 group-hover:opacity-100"
@@ -71,9 +69,13 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
           <h1 className="font-serif text-3xl font-semibold text-foreground">
             {workspace.name}
           </h1>
-          <Button variant="ghost" size="icon-sm" aria-label="Workspace settings">
+          <Link
+            href={`/workspaces/${workspaceId}/settings`}
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            aria-label="Workspace settings"
+          >
             <Settings />
-          </Button>
+          </Link>
         </div>
       </div>
 
@@ -81,7 +83,7 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
         <div className="space-y-4 md:col-span-8">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">Projects</h2>
-            <CreateProject workspaceId={workspaceId}/>
+            <CreateProject workspaceId={workspaceId} role={role}/>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -92,7 +94,7 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
         <div className="space-y-4 self-start md:col-span-4 md:sticky md:top-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">Members</h2>
-            <InviteUser workspaceId={workspaceId} userId="1" />
+            <InviteUser workspaceId={workspaceId} role={role} />
           </div>
 
           <Card className="overflow-hidden">

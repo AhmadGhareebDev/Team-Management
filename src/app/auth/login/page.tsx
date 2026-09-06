@@ -45,7 +45,7 @@ export default function Login() {
                   type: "success",
                   description: "Logged in successfully!",
                })
-               router.push('/')
+               router.push('/workspaces')
                router.refresh()
                return;
             }

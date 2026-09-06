@@ -99,6 +99,7 @@ export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   notifications: many(notification),
+  notificationsActedOn: many(notification, { relationName: "actor" }),
   workspaces: many(workspaceMembers),
   projects: many(projectMembers),
   subtasks: many(subtask),

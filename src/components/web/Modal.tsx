@@ -65,7 +65,14 @@ export function Modal({
         </DialogHeader>
 
         {onSubmit ? (
-          <form id={formId} onSubmit={onSubmit} className="grid gap-4">
+          <form
+            id={formId}
+            onSubmit={(event) => {
+              event.preventDefault()
+              onSubmit(event)
+            }}
+            className="grid gap-4"
+          >
             {children}
           </form>
         ) : (

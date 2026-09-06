@@ -13,6 +13,8 @@ import { ImageDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
 import { updateWorkspaceCover } from "@/actions/updateWorkspaceCover"
+import { useAuthGate } from "@/components/web/AuthGateProvider"
+import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
 
 interface UploadAuthResponse {
   token: string
@@ -24,14 +26,15 @@ interface UploadAuthResponse {
 
 export default function SetWorkspaceCover({
   workspaceId,
-  canEdit,
+  role,
   className,
 }: {
   workspaceId: string
-  canEdit: boolean
+  role: WorkspaceRole | null
   className?: string
 }) {
   const router = useRouter()
+  const { require } = useAuthGate()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -123,8 +126,12 @@ export default function SetWorkspaceCover({
     }
   }
 
-  if (!canEdit) {
-    return null
+  const handleClick = () => {
+    require({
+      role,
+      requiredRole: ["owner", "admin"],
+      onAllowed: () => fileInputRef.current?.click(),
+    })
   }
 
   return (
@@ -141,7 +148,7 @@ export default function SetWorkspaceCover({
         type="button"
         aria-label="Set workspace cover"
         disabled={isUploading}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={handleClick}
         className={cn(
           "flex aspect-4/1 w-full cursor-pointer items-center justify-center rounded-lg bg-muted text-muted-foreground transition-all hover:bg-muted/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60",
           className
