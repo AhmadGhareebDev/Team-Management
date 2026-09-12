@@ -78,6 +78,7 @@ export async function getWorkspaceProjectsWithMembers(workspaceId: string) {
         columns: {
             id: true,
             name: true,
+            description: true,
             cover_url: true,
         },
         with: {

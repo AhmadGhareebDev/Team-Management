@@ -105,7 +105,7 @@ export default async function WorkspaceSettingsPage({
               </CardDescription>
             </CardHeader>
             <CardContent className="divide-y divide-border p-0">
-              <WorkspaceMembersList workspaceId={workspaceId} />
+              <WorkspaceMembersList workspaceId={workspaceId} role={role} />
             </CardContent>
           </Card>
         </div>

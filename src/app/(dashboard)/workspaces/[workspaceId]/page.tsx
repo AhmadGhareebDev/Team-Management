@@ -87,7 +87,7 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ProjectList workspaceId={workspaceId} />
+            <ProjectList workspaceId={workspaceId} role={role} />
           </div>
         </div>
 
@@ -99,7 +99,7 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
 
           <Card className="overflow-hidden">
             <div className="divide-y divide-border">
-              <WorkspaceMembersList workspaceId={workspaceId} />
+              <WorkspaceMembersList workspaceId={workspaceId} role={role} />
             </div>
           </Card>
         </div>
