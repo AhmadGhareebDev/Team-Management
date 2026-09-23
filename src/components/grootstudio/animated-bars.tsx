@@ -13,7 +13,7 @@ interface AnimatedBarsProps {
 
 const GradientBars: React.FC<AnimatedBarsProps> = ({
     numBars = 20,
-    gradientFrom = '#f43f5e',
+    gradientFrom = 'var(--primary)',
     gradientTo = 'transparent',
     animationDuration = 3,
     className = '',
@@ -36,17 +36,17 @@ const GradientBars: React.FC<AnimatedBarsProps> = ({
         @keyframes fluidWave {
           0% { 
             transform: scaleY(var(--initial-scale)); 
-            opacity: 0.4;
+            opacity: 0.35;
             filter: brightness(1);
           }
           50% { 
             transform: scaleY(calc(var(--initial-scale) * 1.15)); 
-            opacity: 0.8;
-            filter: brightness(1.2);
+            opacity: 0.75;
+            filter: brightness(1.25);
           }
           100% { 
             transform: scaleY(calc(var(--initial-scale) * 0.9)); 
-            opacity: 0.5;
+            opacity: 0.45;
             filter: brightness(0.9);
           }
         }
@@ -67,19 +67,20 @@ const GradientBars: React.FC<AnimatedBarsProps> = ({
                             <div
                                 key={index}
                                 className="relative"
-                                style={{
-                                    flex: 1,
-                                    marginLeft: index === 0 ? '0' : '-1px',
-                                    height: '100%',
-                                    background: `linear-gradient(to top, ${gradientFrom}, ${gradientTo})`,
-                                    transform: `scaleY(${height / 100})`,
-                                    transformOrigin: 'bottom',
-                                    animation: `fluidWave ${animationDuration}s ease-in-out infinite alternate`,
-                                    animationDelay: `-${index * (animationDuration / numBars)}s`,
-                                    // @ts-ignore
-
-                                    '--initial-scale': height / 100,
-                                }}
+                                style={
+                                    {
+                                        flex: 1,
+                                        marginLeft: index === 0 ? '0' : '-1px',
+                                        height: '100%',
+                                        background: `linear-gradient(to top, var(--gradient-from, ${gradientFrom}), ${gradientTo})`,
+                                        transform: `scaleY(${height / 100})`,
+                                        transformOrigin: 'bottom',
+                                        animation: `fluidWave ${animationDuration}s ease-in-out infinite alternate`,
+                                        animationDelay: `-${index * (animationDuration / numBars)}s`,
+                                        '--initial-scale': height / 100,
+                                        '--gradient-from': gradientFrom,
+                                    } as React.CSSProperties
+                                }
                             />
                         );
                     })}
@@ -100,8 +101,8 @@ interface AnimatedBarsBackgroundProps {
 }
 
 export function AnimatedBars({
-    numBars = 12,
-    gradientFrom = '#f43f5e',
+    numBars = 16,
+    gradientFrom = 'var(--primary)',
     gradientTo = 'transparent',
     animationDuration = 4,
     backgroundColor,
@@ -110,7 +111,10 @@ export function AnimatedBars({
 }: AnimatedBarsBackgroundProps) {
     return (
         <section
-            className={cn("relative min-h-[400px] w-full flex flex-col items-center justify-center overflow-hidden rounded-lg border bg-background", className)}
+            className={cn(
+                "relative min-h-[400px] w-full flex flex-col items-center justify-center overflow-hidden rounded-lg border border-border bg-background text-foreground",
+                className
+            )}
             style={backgroundColor ? { backgroundColor } : undefined}
         >
             <GradientBars

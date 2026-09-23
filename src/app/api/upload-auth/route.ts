@@ -1,10 +1,6 @@
 import { getUploadAuthParams } from "@imagekit/next/server"
 import { auth } from "@/lib/auth"
-import { db } from "@/db"
-import { workspaceMembers } from "@/db/schemas/workspaceMembers"
-import { eq, and } from "drizzle-orm"
 import { headers } from "next/headers"
-
 export async function GET(request: Request) {
     const session = await auth.api.getSession({ headers: await headers() })
 
@@ -22,29 +18,6 @@ export async function GET(request: Request) {
     const isAvatarAllowed = folder === avatarPrefix || folder.startsWith(avatarPrefix + "/")
 
     if (isAvatarAllowed) {
-        return issueAuthParams(folder)
-    }
-
-    const coverMatch = folder.match(/^workspaces\/([^/]+)\/cover-image$/)
-    if (coverMatch) {
-        const workspaceId = coverMatch[1]
-
-        const membership = await db.query.workspaceMembers.findFirst({
-            where: and(
-                eq(workspaceMembers.workspaceId, workspaceId),
-                eq(workspaceMembers.userId, session.user.id)
-            )
-        })
-
-        if (!membership) {
-            return Response.json({ error: "folder is not allowed for this user" }, { status: 400 })
-        }
-
-        const canEdit = membership.role === "owner" || membership.role === "admin"
-        if (!canEdit) {
-            return Response.json({ error: "folder is not allowed for this user" }, { status: 400 })
-        }
-
         return issueAuthParams(folder)
     }
 

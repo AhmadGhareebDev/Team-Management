@@ -14,9 +14,9 @@ import { Button } from "@/components/ui/button"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
-import { searchUsersByUsername } from "@/actions/searchUsers"
-import type { SearchedUser } from "@/actions/searchUsers"
-import { inviteUserToWorkspace } from "@/actions/InviteUserToWorksoace"
+import { searchUsersByUsername } from "@/actions/user"
+  import type { SearchedUser } from "@/actions/user"
+  import { inviteUserToWorkspace } from "@/actions/workspace"
 import { cn } from "@/lib/utils"
 
 export default function InviteMembersDialog({

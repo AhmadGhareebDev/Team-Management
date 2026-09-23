@@ -1,7 +1,7 @@
 "use server"
 import { imagekit } from "@/lib/imagekit"
 import { auth } from "@/lib/auth"
-import { headers } from "next/headers";
+import { headers } from "next/headers"
 
 
 export async function deleteImageKitFile(fileId: string) {

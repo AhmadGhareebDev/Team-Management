@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, pgEnum , uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, pgEnum , uniqueIndex , index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { workspace } from "@/db/schemas/workspace";
 import { user } from "@/db/schemas/auth-schema";
@@ -14,6 +14,7 @@ export const workspaceMembers = pgTable("workspace_members", {
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("workspace_members_uidx").on(table.workspaceId, table.userId),
+  index("workspace_members_user_id_idx").on(table.userId),
 ]);
 
 

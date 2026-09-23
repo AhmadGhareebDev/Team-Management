@@ -19,7 +19,7 @@ import {
   makeMemberOwner,
   makeMemberRegular,
   removeWorkspaceMember,
-} from "@/actions/updateWorkspaceMemberRole"
+} from "@/actions/workspace"
 import { authClient } from "@/lib/auth-client"
 import { WorkspaceMemberWithUser } from "@/db/queries/workspaces"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
@@ -108,18 +108,20 @@ export default function MemberRow({
     .slice(0, 2)
     .toUpperCase()
 
+  const displayName = isSelf ? "You" : member.user.name
+
   return (
     <div key={member.user.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40">
       <ImageKitAvatar
         src={member.user.avatar_url}
-        alt={member.user.name}
+        alt={displayName}
         initials={initials}
         size={32}
         className="size-8!"
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">
-          {member.user.name}
+          {displayName}
         </p>
         <p className="truncate text-xs text-muted-foreground">
           @{member.user.username}

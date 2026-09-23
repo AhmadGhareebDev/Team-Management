@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { deleteWorkspace } from "@/actions/deleteWorkspace"
+import { deleteWorkspace } from "@/actions/workspace"
 import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/web/Modal"
 import { toast } from "@/components/ui/toast"

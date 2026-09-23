@@ -1,13 +1,14 @@
 "use client"
+
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { EllipsisVertical, Pencil, Trash2, Users } from "lucide-react"
-import { WorkspaceProjectWithMembers } from "@/db/queries/workspaces"
+import { EllipsisVertical, Folder, Pencil, Trash2, UserPlus, Users } from "lucide-react"
+import Link from "next/link"
+import { WorkspaceProjectWithMembers, WorkspaceMemberWithUser } from "@/db/queries/workspaces"
 import { AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
-import { ImageKitImage } from "@/components/web/ImageKitImage"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,10 +21,13 @@ import { Modal } from "@/components/web/Modal"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
+import AddProjectMembersDialog from "./AddProjectMembersDialog"
 import { useAuthGate } from "@/components/web/AuthGateProvider"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
-import { deleteProject, editProjectInfo } from "@/actions/projectActions"
+import { authClient } from "@/lib/auth-client"
+import { deleteProject, editProjectInfo } from "@/actions/project"
 import { insertProjectSchema, type InsertProjectSchemaType } from "@/db/validations"
+import { cn } from "@/lib/utils"
 
 const MAX_AVATARS = 4
 
@@ -39,13 +43,17 @@ export default function ProjectCard({
   project,
   workspaceId,
   role,
+  members,
 }: {
   project: WorkspaceProjectWithMembers
   workspaceId: string
   role: WorkspaceRole | null
+  members: WorkspaceMemberWithUser[]
 }) {
   const router = useRouter()
   const { require } = useAuthGate()
+  const { data: session } = authClient.useSession()
+  const currentUserId = session?.user.id
   const shownMembers = project.members.slice(0, MAX_AVATARS)
   const hiddenCount = project.members.length - shownMembers.length
   const memberLabel = project.members.length === 1 ? "member" : "members"
@@ -54,8 +62,10 @@ export default function ProjectCard({
 
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [addMembersOpen, setAddMembersOpen] = useState(false)
   const [isEditPending, startEditTransition] = useTransition()
   const [isDeletePending, startDeleteTransition] = useTransition()
+  const projectMemberIds = project.members.map((m) => m.user.id)
 
   const editForm = useForm<InsertProjectSchemaType>({
     resolver: zodResolver(insertProjectSchema),
@@ -115,96 +125,133 @@ export default function ProjectCard({
     })
   }
 
+  const handleCardClick = (e: React.MouseEvent<HTMLElement>) => {
+    const target = e.target as HTMLElement
+    if (target.closest("a, button, input, [data-stop-nav]")) return
+    router.push(`/workspaces/${workspaceId}/project/${project.id}`)
+  }
+
   return (
-    <Card className="group/card relative overflow-hidden pt-0 transition-shadow duration-300 hover:shadow-md">
-      <div className="relative aspect-video w-full overflow-hidden">
-        {project.cover_url ? (
-          <ImageKitImage
-            src={project.cover_url}
-            alt={project.name}
-            fill
-            sizes="(min-width: 640px) 50vw, 100vw"
-            className="transition-transform duration-500 group-hover/card:scale-105"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted/70 via-muted/40 to-primary/10">
-            <span className="font-serif text-4xl font-semibold text-muted-foreground/40">
-              {project.name.slice(0, 1).toUpperCase()}
-            </span>
+    <Card
+      size="sm"
+      onClick={handleCardClick}
+      className={cn(
+        "group/card relative cursor-pointer border-0 transition-all duration-300",
+        "bg-gradient-to-br from-primary/[0.03] via-transparent to-transparent hover:from-primary/[0.08]",
+        "hover:shadow-md hover:ring-foreground/15"
+      )}
+    >
+      <CardContent className="flex flex-col gap-4 p-5">
+        {/* Top Bar: Icon + Title + Actions */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-muted/60 text-foreground transition-colors group-hover/card:bg-primary group-hover/card:text-primary-foreground">
+              <Folder className="h-4 w-4" />
+            </div>
+            <h3 className="truncate text-base font-semibold tracking-tight text-foreground">
+              <Link
+                href={`/workspaces/${workspaceId}/project/${project.id}`}
+                className="hover:underline focus:outline-none"
+              >
+                {project.name}
+              </Link>
+            </h3>
           </div>
+
+          {isManager && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                    aria-label={`Actions for ${project.name}`}
+                  />
+                }
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={openEdit}>
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() =>
+                    require({
+                      role,
+                      requiredRole: ["owner", "admin"],
+                      onAllowed: () => setDeleteOpen(true),
+                    })
+                  }
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
+        {/* Description Section */}
+        {project.description ? (
+          <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+            {project.description}
+          </p>
+        ) : (
+          <p className="text-sm italic text-muted-foreground/60">
+            No description provided.
+          </p>
         )}
 
-        {isManager && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="absolute top-2 right-2 z-10 border border-border/60 bg-background/80 shadow-sm backdrop-blur"
-                  aria-label={`Actions for ${project.name}`}
+        {/* Footer: Member stats + Avatars */}
+        <div className="flex items-center justify-between border-t border-border/40 pt-3">
+          <span className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
+            <Users className="h-3.5 w-3.5" />
+            {project.members.length} {memberLabel}
+          </span>
+
+          <div className="flex items-center gap-1" data-stop-nav>
+            <AvatarGroup>
+              {shownMembers.map((m) => (
+                <ImageKitAvatar
+                  key={m.user.id}
+                  src={m.user.avatar_url}
+                  alt={m.user.id === currentUserId ? "You" : m.user.name}
+                  initials={m.user.name
+                    .trim()
+                    .split(/\s+/)
+                    .map((w) => w[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                  size={24}
+                  className="size-6!"
                 />
-              }
-            >
-              <EllipsisVertical />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={openEdit}>
-                <Pencil />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
+              ))}
+              {hiddenCount > 0 && <AvatarGroupCount>+{hiddenCount}</AvatarGroupCount>}
+            </AvatarGroup>
+
+            {isManager && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={`Add members to ${project.name}`}
                 onClick={() =>
                   require({
                     role,
                     requiredRole: ["owner", "admin"],
-                    onAllowed: () => setDeleteOpen(true),
+                    onAllowed: () => setAddMembersOpen(true),
                   })
                 }
               >
-                <Trash2 />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-
-      <CardContent className="flex flex-1 flex-col gap-2.5 p-5">
-        <h3 className="truncate text-base font-semibold tracking-tight text-foreground">
-          {project.name}
-        </h3>
-        {project.description && (
-          <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground/90">
-            {project.description}
-          </p>
-        )}
-
-        <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-3">
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Users className="size-3.5" />
-            {project.members.length} {memberLabel}
-          </span>
-          <AvatarGroup>
-            {shownMembers.map((m) => (
-              <ImageKitAvatar
-                key={m.user.id}
-                src={m.user.avatar_url}
-                alt={m.user.name}
-                initials={m.user.name
-                  .trim()
-                  .split(/\s+/)
-                  .map((w) => w[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
-                size={24}
-                className="size-6!"
-              />
-            ))}
-            {hiddenCount > 0 && <AvatarGroupCount>+{hiddenCount}</AvatarGroupCount>}
-          </AvatarGroup>
+                <UserPlus className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
 
@@ -255,6 +302,15 @@ export default function ProjectCard({
           </p>
         )}
       </Modal>
+
+      <AddProjectMembersDialog
+        open={addMembersOpen}
+        onOpenChange={setAddMembersOpen}
+        workspaceId={workspaceId}
+        projectId={project.id}
+        members={members}
+        projectMemberIds={projectMemberIds}
+      />
     </Card>
   )
 }

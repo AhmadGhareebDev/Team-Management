@@ -2,7 +2,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Plus } from "lucide-react"
-import { createProject } from "@/actions/createProject"
+import { createProject } from "@/actions/project"
 import { useTransition, useState } from "react"
 import { Modal } from "@/components/web/Modal"
 import { Button } from "@/components/ui/button"

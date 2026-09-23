@@ -7,7 +7,7 @@ import { Field, FieldError, FieldGroup , FieldLabel } from "@/components/ui/fiel
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client"
-import { createEmailVerifyTokenAction } from "@/actions/create-email-verify-token"
+import { createEmailVerifyTokenAction } from "@/actions/user"
 import { toast } from "@/components/ui/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

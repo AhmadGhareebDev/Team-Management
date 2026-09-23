@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Bell, Clock } from "lucide-react"
+import { useTransition } from "react"
+import { Bell, CheckCheck, Clock } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -9,7 +11,10 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Spinner } from "@/components/ui/spinner"
+import { toast } from "@/components/ui/toast"
 import NotificationRow from "@/components/web/NotificationRow"
+import { markAllNotificationsAsRead } from "@/actions/notifications"
 import type { Notification } from "@/db/queries/notifications"
 
 type NotificationTab = "invitations" | "tasks" | "members"
@@ -24,6 +29,7 @@ const taskTypes = [
   "task_assigned",
   "task_unblocked",
   "dependency_overdue",
+  "dependency_resolved",
   "deadline_approaching",
   "task_reassigned",
   "task_overdue",
@@ -43,8 +49,10 @@ export function NotificationsDropdown({
 }: {
   notifications: Notification[]
 }) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = React.useState<NotificationTab>("invitations")
   const [handledIds, setHandledIds] = React.useState<Set<string>>(() => new Set())
+  const [isMarkingAll, startMarkAllTransition] = useTransition()
 
   const items = React.useMemo(
     () => notifications.filter((n) => !handledIds.has(n.id)),
@@ -56,6 +64,33 @@ export function NotificationsDropdown({
 
   const handleHandled = (id: string) => {
     setHandledIds((prev) => new Set(prev).add(id))
+  }
+
+  const handleMarkAll = () => {
+    startMarkAllTransition(async () => {
+      const result = await markAllNotificationsAsRead()
+
+      if (result?.error) {
+        toast.add({
+          type: "error",
+          description: "Could not mark notifications as read.",
+        })
+        return
+      }
+
+      setHandledIds((prev) => {
+        const next = new Set(prev)
+        for (const n of notifications) {
+          if (!n.isRead) next.add(n.id)
+        }
+        return next
+      })
+      router.refresh()
+      toast.add({
+        type: "success",
+        description: "All notifications marked as read.",
+      })
+    })
   }
 
   return (
@@ -119,6 +154,23 @@ export function NotificationsDropdown({
               ))}
             </ul>
           )}
+        </div>
+
+        <div className="border-t border-border p-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full"
+            onClick={handleMarkAll}
+            disabled={isMarkingAll || unreadCount === 0}
+          >
+            {isMarkingAll ? (
+              <Spinner data-icon="inline-start" className="size-3.5" />
+            ) : (
+              <CheckCheck className="size-4" />
+            )}
+            Mark all as read
+          </Button>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { task } from "@/db/schemas/task";
 import { user } from "@/db/schemas/auth-schema";
@@ -13,7 +13,9 @@ export const subtask = pgTable("subtask", {
   updatedAt: timestamp("updated_at")
     .$onUpdate(() => new Date())
     .notNull(),
-});
+}, (table) => [
+  index("subtask_task_id_idx").on(table.taskId),
+]);
 
 export const subtaskRelations = relations(subtask, ({ one }) => ({
   task: one(task, {

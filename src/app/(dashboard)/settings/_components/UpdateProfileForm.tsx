@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import { authClient } from "@/lib/auth-client"
-import { checkUsername } from "@/actions/checkUsername"
+import { checkUsername } from "@/actions/user"
 import {
   updateProfileSchema,
   type UpdateProfileSchemaType,

@@ -13,7 +13,7 @@ import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 import { authClient } from "@/lib/auth-client"
-import { deleteImageKitFile } from "@/actions/deleteImageKitFile"
+import { deleteImageKitFile } from "@/actions/storage"
 
 interface UploadAuthResponse {
   token: string

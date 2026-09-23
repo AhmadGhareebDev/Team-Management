@@ -23,3 +23,32 @@ export {
   insertProjectSchema,
   type InsertProjectSchemaType,
 } from "./project"
+
+export {
+  insertTaskSchema,
+  type InsertTaskSchemaType,
+} from "./task"
+export {
+  taskPositionSchema,
+  type TaskPositionSchemaType,
+} from "./task"
+export {
+  taskDependencySchema,
+  type TaskDependencySchemaType,
+} from "./task"
+export {
+  taskStatusSchema,
+  type TaskStatusSchemaType,
+} from "./task"
+export {
+  updateTaskSchema,
+  type UpdateTaskSchemaType,
+} from "./task"
+export {
+  taskAssigneesSchema,
+  type TaskAssigneesSchemaType,
+} from "./task"
+export {
+  insertSubtaskSchema,
+  type InsertSubtaskSchemaType,
+} from "./task"

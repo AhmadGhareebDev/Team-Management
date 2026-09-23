@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
-import { respondInvitation } from "@/actions/respondInvitation"
+import { respondInvitation } from "@/actions/workspace"
+import { markNotificationAsRead } from "@/actions/notifications"
 import type { Notification } from "@/db/queries/notifications"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +23,7 @@ const taskTypes = [
   "task_assigned",
   "task_unblocked",
   "dependency_overdue",
+  "dependency_resolved",
   "deadline_approaching",
   "task_reassigned",
   "task_overdue",
@@ -34,6 +36,7 @@ const taskIcons: Record<(typeof taskTypes)[number], typeof CheckCircle2> = {
   task_overdue: Clock,
   deadline_approaching: Clock,
   dependency_overdue: Clock,
+  dependency_resolved: CheckCircle2,
 }
 
 function formatRelativeTime(date: Date) {
@@ -60,12 +63,40 @@ function initials(name: string) {
 export default function NotificationRow({
   notification,
   onHandled,
+  onRead,
 }: {
   notification: Notification
   onHandled?: (id: string) => void
+  onRead?: (id: string) => void
 }) {
   const router = useRouter()
   const [action, setAction] = React.useState<"accepted" | "declined" | null>(null)
+
+  const handleOpenTask = async () => {
+    const url =
+      notification.projectId && notification.project
+        ? `/workspaces/${notification.project.workspaceId}/project/${notification.projectId}`
+        : null
+
+    try {
+      if (!notification.isRead) {
+        await markNotificationAsRead(notification.id)
+      }
+
+      if (url) {
+        onRead?.(notification.id)
+        router.push(url)
+      } else {
+        onRead?.(notification.id)
+        router.refresh()
+      }
+    } catch {
+      toast.add({
+        type: "error",
+        description: "Could not update this notification.",
+      })
+    }
+  }
 
   const handleAction = async (choice: "accepted" | "declined") => {
     if (!notification.workspaceInvitationId) return
@@ -201,7 +232,12 @@ export default function NotificationRow({
   const TaskIcon =
     taskIcons[notification.type as (typeof taskTypes)[number]] ?? CheckCircle2
   return (
-    <div className="flex items-start gap-3 px-4 py-3">
+    <button
+      type="button"
+      onClick={handleOpenTask}
+      aria-label={notification.body}
+      className="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
+    >
       <TaskIcon
         className={cn(
           "mt-0.5 size-4 shrink-0",
@@ -219,6 +255,6 @@ export default function NotificationRow({
       {!notification.isRead && (
         <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
       )}
-    </div>
+    </button>
   )
 }

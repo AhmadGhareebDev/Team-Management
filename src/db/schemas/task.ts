@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, pgEnum , real, index } from "drizzle-orm/pg-core";
 import { user } from "@/db/schemas/auth-schema";
 import { project } from "@/db/schemas/project";
 import { taskAssignees } from "@/db/schemas/taskAssignees";
@@ -30,12 +30,18 @@ export const task = pgTable("task", {
   description: text("description"),
   status: taskStatusEnum("status").notNull().default("todo"),
   priority: taskPriorityEnum("priority").notNull().default("medium"),
+  positionX: real("position_x").notNull().default(0),
+  positionY: real("position_y").notNull().default(0),
   dueDate: timestamp("due_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .$onUpdate(() => new Date())
     .notNull(),
-});
+}, (table) => [
+  index("task_project_id_idx").on(table.projectId),
+  index("task_status_idx").on(table.status),
+  index("task_due_date_idx").on(table.dueDate),
+]);
 
 export const taskRelations = relations(task, ({ one, many }) => ({
   project: one(project, {

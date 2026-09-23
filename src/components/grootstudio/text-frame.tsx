@@ -1,11 +1,14 @@
+"use client";
+
 import React, { useId, memo, useMemo } from "react";
 import { motion, MotionProps, Variants } from "motion/react";
 import { cn } from "@/lib/utils";
 
-interface TextFrameProps extends Omit<
-  React.HTMLAttributes<HTMLElement>,
-  keyof MotionProps | "style"
-> {
+interface TextFrameProps
+  extends Omit<
+    React.HTMLAttributes<HTMLElement>,
+    keyof MotionProps | "style"
+  > {
   children: React.ReactNode;
   as?: React.ElementType;
   lineStyle?: "dashed" | "solid";
@@ -13,35 +16,19 @@ interface TextFrameProps extends Omit<
   className?: string;
 }
 
-const CornerRectangleDimentions = [
-  {
-    id: 1,
-    x: "0",
-    y: "0",
-  },
-  {
-    id: 2,
-    x: "0",
-    y: "calc(100% - 0.16em)",
-  },
-  {
-    id: 3,
-    x: "calc(100% - 0.16em)",
-    y: "calc(100% - 0.16em)",
-  },
-  {
-    id: 4,
-    x: "calc(100% - 0.16em)",
-    y: "0",
-  }
-]
+const CornerRectangleDimensions = [
+  { id: 1, x: "0", y: "0" },
+  { id: 2, x: "0", y: "calc(100% - 0.16em)" },
+  { id: 3, x: "calc(100% - 0.16em)", y: "calc(100% - 0.16em)" },
+  { id: 4, x: "calc(100% - 0.16em)", y: "0" },
+];
 
 const blurInContainerVariants: Variants = {
   hidden: { opacity: 1 },
   show: {
     opacity: 1,
     transition: {
-      delayChildren: 0,
+      delayChildren: 0.1,
       staggerChildren: 0.05,
     },
   },
@@ -49,27 +36,27 @@ const blurInContainerVariants: Variants = {
     opacity: 0,
     transition: {
       staggerChildren: 0.05,
-      staggerDirection: -1 as const,
+      staggerDirection: -1,
     },
   },
-}
+};
 
 const blurInItemVariants: Variants = {
-  hidden: { opacity: 0, filter: "blur(10px)" },
+  hidden: { opacity: 0, filter: "blur(12px)" },
   show: {
     opacity: 1,
     filter: "blur(0px)",
     transition: {
-      duration: 0.5,
+      duration: 0.6,
       ease: [0.16, 1, 0.3, 1],
     },
   },
   exit: {
     opacity: 0,
-    filter: "blur(10px)",
+    filter: "blur(12px)",
     transition: { duration: 0.3 },
   },
-}
+};
 
 const TextFrame = memo(function TextFrame({
   children,
@@ -85,12 +72,11 @@ const TextFrame = memo(function TextFrame({
   return (
     <MotionComponent
       className={cn(
-        "relative inline-flex items-center justify-center px-[0.2em] pt-[0.20em] pb-[0.25em] -mx-[0.1em] text-foreground italic font-[Libre_Baskerville] **:leading-none [&_svg]:text-foreground whitespace-nowrap selection:bg-foreground/10",
+        "relative inline-flex items-center justify-center px-[0.3em] pt-[0.2em] pb-[0.25em] -mx-[0.1em] text-foreground font-serif italic whitespace-nowrap backdrop-blur-[2px]",
         className
       )}
-      aria-label={accessible ? children : undefined}
+      aria-label={accessible ? String(children) : undefined}
     >
-      <style jsx>{`@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400..700;1,400..700&display=swap');`}</style>
       <svg
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -98,9 +84,9 @@ const TextFrame = memo(function TextFrame({
       >
         <defs>
           <linearGradient id={gradientId} x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="var(--color-background)" stopOpacity="0.01" />
-            <stop offset="60%" stopColor="currentColor" stopOpacity="0.10" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0.40" />
+            <stop offset="0%" stopColor="var(--background)" stopOpacity="0.01" />
+            <stop offset="60%" stopColor="currentColor" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0.25" />
           </linearGradient>
           <clipPath id={clipId}>
             <motion.rect
@@ -110,11 +96,12 @@ const TextFrame = memo(function TextFrame({
               height="100%"
               initial={{ x: "100%" }}
               animate={{ x: "0%" }}
-              transition={{ delay: 0.5, duration: 1, type: "spring", damping: 18, stiffness: 100 }}
+              transition={{ delay: 0.3, duration: 0.9, type: "spring", damping: 20, stiffness: 90 }}
             />
           </clipPath>
         </defs>
-        {/* Frame Line */}
+
+        {/* Frame Outer Edge Line */}
         <rect
           x="0.08em"
           y="0.08em"
@@ -126,33 +113,33 @@ const TextFrame = memo(function TextFrame({
           fill={`url(#${gradientId})`}
           clipPath={`url(#${clipId})`}
         />
-        {/* Corner Rectangles */}
-        {
-          CornerRectangleDimentions.map((item) => (
-            <motion.rect
-              key={item.id}
-              x={item.x}
-              y={item.y}
-              width="0.16em"
-              height="0.16em"
-              rx="0.015em"
-              strokeWidth={lineStyle === "dashed" ? "0.012em" : "0.015em"}
-              stroke="currentColor"
-              fill="var(--color-background)"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{
-                delay: 0.8 +  0.08,
-                duration: 0.45,
-                type: "spring",
-                damping: 16,
-                stiffness: 200
-              }}
-              style={{ transformOrigin: "center" }}
-            />
-          ))
-        }
+
+        {/* Corner Anchors */}
+        {CornerRectangleDimensions.map((item) => (
+          <motion.rect
+            key={item.id}
+            x={item.x}
+            y={item.y}
+            width="0.16em"
+            height="0.16em"
+            rx="0.02em"
+            strokeWidth={lineStyle === "dashed" ? "0.012em" : "0.015em"}
+            stroke="currentColor"
+            fill="var(--background)"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{
+              delay: 0.7 + item.id * 0.05,
+              duration: 0.4,
+              type: "spring",
+              damping: 15,
+              stiffness: 180,
+            }}
+            style={{ transformOrigin: "center" }}
+          />
+        ))}
       </svg>
+
       <motion.span
         variants={blurInContainerVariants}
         initial="hidden"
@@ -169,7 +156,7 @@ const TextFrame = memo(function TextFrame({
         </motion.span>
       </motion.span>
     </MotionComponent>
-  )
+  );
 });
 
 TextFrame.displayName = "TextFrame";

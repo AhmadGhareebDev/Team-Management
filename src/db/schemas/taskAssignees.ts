@@ -1,4 +1,4 @@
-import { pgTable , text , timestamp , uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable , text , timestamp , uniqueIndex , index } from "drizzle-orm/pg-core";
 import { task } from "@/db/schemas/task";
 import { user } from "@/db/schemas/auth-schema";
 import { relations } from "drizzle-orm";
@@ -12,6 +12,7 @@ export const taskAssignees = pgTable("task_assignees", {
     assignedAt: timestamp("assigned_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("task_assignees_uidx").on(table.taskId, table.userId),
+  index("task_assignees_user_id_idx").on(table.userId),
 ]);
 
 

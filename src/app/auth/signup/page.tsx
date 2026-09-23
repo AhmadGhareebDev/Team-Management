@@ -12,11 +12,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Spinner } from "@/components/ui/spinner"
-import { checkUsername } from "@/actions/checkUsername";
-import { checkEmail } from "@/actions/checkEmail";
+import { checkUsername, checkEmail } from "@/actions/user";
 import { Check } from "lucide-react"
 import { useState } from "react"
-import { createEmailVerifyTokenAction } from "@/actions/create-email-verify-token";
+import { createEmailVerifyTokenAction } from "@/actions/user";
 export default function SignUp() {
    const router = useRouter();
    const [isLoginPending, startLoginTransition] = useTransition();

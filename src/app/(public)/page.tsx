@@ -1,18 +1,18 @@
-import { AnimatedBars } from "@/components/grootstudio/animated-bars"
-import TextFrameWrapper from "@/components/grootstudio/text-frame-wraper"
+import { AnimatedBars } from "@/components/grootstudio/animated-bars";
+import TextFrameWrapper from "@/components/grootstudio/text-frame-wraper";
 
 export default function LandingPage() {
   return (
-    <div className="">
+    <main className="relative min-h-screen w-full overflow-hidden bg-background">
       <AnimatedBars
-        className="h-screen border-0"
-        numBars={15}
-        gradientFrom="rgb(59, 130, 246)"
-        backgroundColor="rgb(2, 6, 23)"
+        className="h-screen w-full border-0 bg-transparent"
+        numBars={18}
+        gradientFrom="var(--primary)"
+        gradientTo="transparent"
+        animationDuration={5}
       >
         <TextFrameWrapper />
-        
       </AnimatedBars>
-    </div>
-  )
+    </main>
+  );
 }

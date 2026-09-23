@@ -1,6 +1,5 @@
-import { Settings } from "lucide-react"
+import { Settings, ArrowLeft } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import {
   Card,
@@ -13,19 +12,15 @@ import { CreateProject } from "../_components/CreateProject"
 import InviteUser from "../_components/InviteUser"
 import ProjectList from "../_components/ProjectsList"
 import WorkspaceMembersList from "../_components/WorkspaceMembersList"
-import SetWorkspaceCover from "../_components/SetWorkspaceCover"
-import { ImageKitImage } from "@/components/web/ImageKitImage"
-
 
 export const instant = false;
-
-
 
 export default async function WorkspaceDetailsPage({params} : { params: Promise<{workspaceId: string}> }) {
   const { workspaceId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
   const role = session ? await getUserWorkspaceRole(workspaceId, session.user.id) : null;
   const workspace = await getWorkspaceById(workspaceId);
+
   if (!workspace) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -35,48 +30,25 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
       </div>
     )
   }
+
   return (
-    <div className="space-y-6">
-      <div className=" absolute top-22 left-8 z-100 ">
-                <Link href="/workspaces" className={buttonVariants({variant:"secondary"})}>
-                    <ArrowLeft className="size-4"/>
-                    Go Back
-                </Link>
-            </div>
-      <div className="relative">
-        <div className="group relative aspect-4/1 w-full overflow-hidden rounded-lg bg-muted">
-          {workspace.cover_url ? (
-            <ImageKitImage
-              src={workspace.cover_url}
-              alt={`${workspace.name} cover`}
-              fill
-              loading="eager"
-              sizes="100vw"
-              className="rounded-lg object-cover"
-            />
-          ) : null}
-          <SetWorkspaceCover
-            workspaceId={workspaceId}
-            role={role}
-            className={
-              workspace.cover_url
-                ? "absolute inset-0 rounded-lg opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                : "absolute inset-0 rounded-lg"
-            }
-          />
-        </div>
-        <div className="flex items-end justify-between gap-4 pt-4">
+    <div className="space-y-6 pt-2">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Link href="/workspaces" className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
+            <ArrowLeft className="size-4" />
+          </Link>
           <h1 className="font-serif text-3xl font-semibold text-foreground">
             {workspace.name}
           </h1>
-          <Link
-            href={`/workspaces/${workspaceId}/settings`}
-            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-            aria-label="Workspace settings"
-          >
-            <Settings />
-          </Link>
         </div>
+        <Link
+          href={`/workspaces/${workspaceId}/settings`}
+          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+          aria-label="Workspace settings"
+        >
+          <Settings className="size-4" />
+        </Link>
       </div>
 
       <div className="grid items-start gap-6 md:grid-cols-12">
@@ -106,5 +78,4 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
       </div>
     </div>
   )
-
 }

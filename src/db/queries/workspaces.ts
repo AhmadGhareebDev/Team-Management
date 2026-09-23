@@ -17,7 +17,6 @@ export async function getUserWorkSpaces(userId: string) {
                 columns: {
                     id: true,
                     name: true,
-                    cover_url: true,
                 }
             }
         }
@@ -31,7 +30,6 @@ export  async function getWorkspaceById(workspaceId: string) {
         columns: {
             id: true,
             name: true,
-            cover_url: true,
         }
 
     })
@@ -79,7 +77,6 @@ export async function getWorkspaceProjectsWithMembers(workspaceId: string) {
             id: true,
             name: true,
             description: true,
-            cover_url: true,
         },
         with: {
             members: {

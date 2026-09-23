@@ -1,6 +1,6 @@
 
 import ProjectCard from "./ProjectCard"
-import { getWorkspaceProjectsWithMembers } from "@/db/queries/workspaces"
+import { getWorkspaceMembers, getWorkspaceProjectsWithMembers } from "@/db/queries/workspaces"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
 
 export default async function ProjectList({
@@ -11,13 +11,15 @@ export default async function ProjectList({
   role: WorkspaceRole | null
 }) {
     
-    const projects = await getWorkspaceProjectsWithMembers(workspaceId)
-
+    const [projects, members] = await Promise.all([
+        getWorkspaceProjectsWithMembers(workspaceId),
+        getWorkspaceMembers(workspaceId),
+    ])
 
     return (
         <>
         {projects.map((project) => (
-                      <ProjectCard key={project.id} project={project} workspaceId={workspaceId} role={role} />
+                      <ProjectCard key={project.id} project={project} workspaceId={workspaceId} role={role} members={members} />
                     ))}
         </>
         
