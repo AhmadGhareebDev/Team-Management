@@ -24,18 +24,9 @@ import { authClient } from "@/lib/auth-client"
 import { WorkspaceMemberWithUser } from "@/db/queries/workspaces"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
 import { cn } from "@/lib/utils"
+import { resolveActionError } from "@/lib/error-messages"
 
 type MemberAction = "admin" | "member" | "owner"
-
-const errorMessages: Record<string, string> = {
-  UNAUTHENTICATED: "You must be logged in.",
-  UNAUTHORIZED: "You are not a member of this workspace.",
-  FORBIDDEN: "You don't have permission to do this.",
-  TARGET_NOT_FOUND: "That user is no longer a member.",
-  INVALID_TRANSITION: "This action isn't allowed for that user.",
-  INVALID_DATA: "Invalid data.",
-  INTERNAL_SERVER_ERROR: "Something went wrong. Please try again.",
-}
 
 export default function MemberRow({
   member,
@@ -80,7 +71,13 @@ export default function MemberRow({
     const result = await actionFns[action](workspaceId, member.user.id)
     setPendingAction(null)
     if (result.error) {
-      toast.add({ type: "error", description: errorMessages[result.error] ?? result.error })
+      toast.add({
+        type: "error",
+        description: resolveActionError(
+          result.error,
+          "We couldn't update this member's role. Please try again."
+        ),
+      })
       return
     }
     toast.add({ type: "info", description: `${member.user.name} ${actionSuccess[action]}` })
@@ -91,7 +88,13 @@ export default function MemberRow({
     startRemoveTransition(async () => {
       const result = await removeWorkspaceMember(workspaceId, member.user.id)
       if (result.error) {
-        toast.add({ type: "error", description: errorMessages[result.error] ?? result.error })
+        toast.add({
+          type: "error",
+          description: resolveActionError(
+            result.error,
+            "We couldn't remove this member. Please try again."
+          ),
+        })
         return
       }
       setRemoveOpen(false)

@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/toast";
 import Link from "next/link"
 import { useTransition } from "react";
 import { UserCircle , Text } from "lucide-react"
+import { resolveAuthError } from "@/lib/error-messages"
 
 export function AuthNavbar() {
 
@@ -20,7 +21,10 @@ export function AuthNavbar() {
         if(error) {
             toast.add({
                 type: "error",
-                description: "Something went wrong. Please try again later.",
+                description: resolveAuthError(
+                    error,
+                    "We couldn't log you out. Please try again."
+                ),
             })
         }
         })

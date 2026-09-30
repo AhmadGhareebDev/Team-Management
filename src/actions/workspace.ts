@@ -109,8 +109,8 @@ export async function deleteWorkspace(workspaceId: string) {
             return { success: false, error: "UNAUTHORIZED" }
         }
     
-        const canEdit = membership.role === "owner" || membership.role === "admin";
-        if (!canEdit) {
+        const isOwner = membership.role === "owner";
+        if (!isOwner) {
             return { success: false, error: "FORBIDDEN" }
         }
 

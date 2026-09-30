@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTransition } from "react"
+import { resolveAuthError } from "@/lib/error-messages"
 export function ResetPasswordForm() {
     const [isResetPending , startResetTransition] = useTransition();
     const form = useForm<ResetPasswordSchemaType>({
@@ -35,7 +36,10 @@ export function ResetPasswordForm() {
                 toast.add({
                     type: "error",
                     title: "Reset failed",
-                    description: "An error occurred while resetting your password."
+                    description: resolveAuthError(
+                        error,
+                        "We couldn't change your password. Please try again in a moment."
+                    ),
                 })
                 return;
             }

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 import { authClient } from "@/lib/auth-client"
 import { deleteImageKitFile } from "@/actions/storage"
+import { uploadErrorMessages } from "@/lib/error-messages"
 
 interface UploadAuthResponse {
   token: string
@@ -47,12 +48,29 @@ export function AvatarUploader({
     .slice(0, 2)
     .toUpperCase()
 
-  const getAuthParams = async (folder: string): Promise<UploadAuthResponse> => {
-    const response = await fetch(`/api/upload-auth?folder=${encodeURIComponent(folder)}`)
-    if (!response.ok) {
-      throw new Error(`Upload authentication failed (${response.status})`)
+  const getAuthParams = async (
+    folder: string
+  ): Promise<
+    { ok: true; data: UploadAuthResponse } | { ok: false; message: string }
+  > => {
+    let response: Response
+    try {
+      response = await fetch(`/api/upload-auth?folder=${encodeURIComponent(folder)}`)
+    } catch {
+      return { ok: false, message: uploadErrorMessages.startFailed }
     }
-    return response.json()
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        message:
+          response.status === 401
+            ? uploadErrorMessages.sessionExpired
+            : uploadErrorMessages.startFailed,
+      }
+    }
+
+    return { ok: true, data: (await response.json()) as UploadAuthResponse }
   }
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,26 +78,24 @@ export function AvatarUploader({
     if (!file) return
 
     if (!["image/png", "image/jpeg"].includes(file.type)) {
-      toast.add({ type: "error", description: "Please choose a PNG or JPG image." })
+      toast.add({ type: "error", description: uploadErrorMessages.invalidFileType })
       return
     }
     if (file.size > 2 * 1024 * 1024) {
-      toast.add({ type: "error", description: "Image must be 2MB or smaller." })
+      toast.add({ type: "error", description: uploadErrorMessages.fileTooLarge })
       return
     }
 
     setIsUploading(true)
     setProgress(0)
 
-    let authParams: UploadAuthResponse
-    try {
-      authParams = await getAuthParams(`avatars/${userId}`)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not start the upload."
-      toast.add({ type: "error", description: message })
+    const auth = await getAuthParams(`avatars/${userId}`)
+    if (!auth.ok) {
+      toast.add({ type: "error", description: auth.message })
       setIsUploading(false)
       return
     }
+    const authParams = auth.data
 
     try {
       const response = await upload({
@@ -102,7 +118,7 @@ export function AvatarUploader({
       })
 
       if (updateResult.error) {
-        toast.add({ type: "error", description: "Avatar uploaded, but saving it failed." })
+        toast.add({ type: "error", description: uploadErrorMessages.saveFailed })
         return
       }
 
@@ -113,15 +129,15 @@ export function AvatarUploader({
       toast.add({ type: "success", description: "Avatar updated." })
     } catch (error) {
       if (error instanceof ImageKitAbortError) {
-        toast.add({ type: "error", description: "Upload was aborted." })
+        toast.add({ type: "error", description: uploadErrorMessages.aborted })
       } else if (error instanceof ImageKitInvalidRequestError) {
-        toast.add({ type: "error", description: error.message })
+        toast.add({ type: "error", description: uploadErrorMessages.rejected })
       } else if (error instanceof ImageKitUploadNetworkError) {
-        toast.add({ type: "error", description: "Network error while uploading." })
+        toast.add({ type: "error", description: uploadErrorMessages.network })
       } else if (error instanceof ImageKitServerError) {
-        toast.add({ type: "error", description: error.message })
+        toast.add({ type: "error", description: uploadErrorMessages.serviceError })
       } else {
-        toast.add({ type: "error", description: "Something went wrong." })
+        toast.add({ type: "error", description: uploadErrorMessages.failed })
       }
     } finally {
       setIsUploading(false)

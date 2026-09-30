@@ -8,6 +8,7 @@ import { Modal } from "@/components/web/Modal"
 import { toast } from "@/components/ui/toast"
 import { useAuthGate } from "@/components/web/AuthGateProvider"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
+import { resolveActionError } from "@/lib/error-messages"
 
 export default function DeleteWorkspace({
   workspaceId,
@@ -24,7 +25,7 @@ export default function DeleteWorkspace({
   const handleDelete = () => {
     require({
       role,
-      requiredRole: ["owner", "admin"],
+      requiredRole: ["owner"],
       onAllowed: () => setOpen(true),
     })
   }
@@ -49,12 +50,14 @@ export default function DeleteWorkspace({
                     type: "error",
                     description: "You do not have permission to delete this workspace.",
                 })
-            } else if(result.error === "INTERNAL_SERVER_ERROR") {
+            } else {
                 toast.add({
                     type: "error",
-                    description: "An error occurred while deleting the workspace. Please try again later.",
-                }
-                )
+                    description: resolveActionError(
+                        result.error,
+                        "We couldn't delete this workspace. Please try again in a moment."
+                    ),
+                })
             }
         }
 

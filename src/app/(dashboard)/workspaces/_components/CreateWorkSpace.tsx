@@ -15,6 +15,7 @@ import {
   insertWorkspaceSchema,
   type InsertWorkspaceSchemaType,
 } from "@/db/validations"
+import { resolveActionError } from "@/lib/error-messages"
 
 export function CreateWorkSpace() {
   const router = useRouter()
@@ -44,10 +45,13 @@ export function CreateWorkSpace() {
               form.setError("root", { message: "Invalid data. Please check your input." })
               return
             }
-            if (result.error === "INTERNAL_ERROR") {
-              form.setError("root", { message: "Something went wrong , please try again later." })
-              return
-            }
+            form.setError("root", {
+              message: resolveActionError(
+                result.error,
+                "We couldn't create this workspace. Please try again in a moment."
+              ),
+            })
+            return
           }
 
           if (result?.success) {

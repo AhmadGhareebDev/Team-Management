@@ -22,6 +22,7 @@ import {
   updateProfileSchema,
   type UpdateProfileSchemaType,
 } from "@/db/validations"
+import { resolveAuthError } from "@/lib/error-messages"
 
 export default function UpdateProfileForm({
   name,
@@ -55,8 +56,10 @@ export default function UpdateProfileForm({
       if (error) {
         toast.add({
           type: "error",
-          description:
-           "Something went wrong. Please try again later.",
+          description: resolveAuthError(
+            error,
+            "We couldn't save your profile. Please try again in a moment."
+          ),
         })
         return
       }

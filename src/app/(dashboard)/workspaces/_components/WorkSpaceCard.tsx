@@ -36,30 +36,32 @@ export function WorkSpaceCard({ workspace }: { workspace: WorkspaceWithRole }) {
       size="sm"
       onClick={() => router.push(`/workspaces/${workspace.workspaceId}`)}
       className={cn(
-        "group relative cursor-pointer border-0 transition-all duration-300",
-        "bg-gradient-to-br from-primary/[0.03] via-transparent to-transparent hover:from-primary/[0.08]",
-        "hover:shadow-md hover:ring-foreground/15"
+        "group cursor-pointer border-0 bg-card transition-colors duration-200",
+        "hover:bg-muted/50"
       )}
     >
       <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex h-9 w-9 items-center justify-center bg-muted/60 font-mono text-sm font-bold text-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-muted font-mono text-sm font-bold text-foreground transition-colors duration-200 group-hover:bg-primary group-hover:text-primary-foreground">
             {initial ? initial : <Building2 className="h-4 w-4" />}
           </div>
 
-          <CardAction className="flex items-center gap-2">
+          <CardTitle
+            title={name}
+            className="min-w-0 flex-1 truncate text-base font-semibold normal-case tracking-normal"
+          >
+            {name}
+          </CardTitle>
+
+          <CardAction className="static flex shrink-0 items-center">
             <RoleBadge role={role} />
-            <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
           </CardAction>
         </div>
-
-        <CardTitle title={name} className="mt-3 truncate text-base font-semibold normal-case tracking-normal">
-          {name}
-        </CardTitle>
       </CardHeader>
 
-      <CardFooter className="pt-0 text-[12px] font-mono text-muted-foreground">
+      <CardFooter className="flex items-center justify-between pt-0 text-[12px] font-mono text-muted-foreground">
         <span>Click to view workspace</span>
+        <ArrowUpRight className="h-4 w-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
       </CardFooter>
     </Card>
   )

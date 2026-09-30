@@ -15,6 +15,7 @@ import {
   passwordValidator,
   type PasswordValidatorSchemaType,
 } from "@/db/validations"
+import { resolveAuthError } from "@/lib/error-messages"
 
 export default function DeleteUserAccount() {
   const router = useRouter()
@@ -36,7 +37,10 @@ export default function DeleteUserAccount() {
       if (error) {
         toast.add({
           type: "error",
-          description: "Something went wrong. Please try again later.",
+          description: resolveAuthError(
+            error,
+            "We couldn't delete your account. Please try again in a moment."
+          ),
         })
         return
       }

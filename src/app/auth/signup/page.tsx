@@ -16,6 +16,7 @@ import { checkUsername, checkEmail } from "@/actions/user";
 import { Check } from "lucide-react"
 import { useState } from "react"
 import { createEmailVerifyTokenAction } from "@/actions/user";
+import { resolveAuthError } from "@/lib/error-messages";
 export default function SignUp() {
    const router = useRouter();
    const [isLoginPending, startLoginTransition] = useTransition();
@@ -42,7 +43,7 @@ export default function SignUp() {
             if (!emailCheckResult?.success) {
                toast.add({
                   type: "warning",
-                  description:"Something went wrong. Please try again later.", 
+                  description: "We couldn't check that email right now. Please try again.",
                })
                return
             }
@@ -72,7 +73,10 @@ export default function SignUp() {
                return;
             }
             form.setError("root", {
-               message: "Something went wrong. Please try again later."
+               message: resolveAuthError(
+                  error,
+                  "We couldn't create your account. Please try again in a moment."
+               ),
          });
          })
    }
@@ -116,7 +120,7 @@ export default function SignUp() {
                                   const result = await checkUsername(field.value);
                                   if (!result?.success) {
                                      form.setError("root" , {
-                                        message: result.message
+                                        message: "We couldn't check that username right now. Please try again."
                                      })
                                      setUsernameStatus("idle");
                                      return

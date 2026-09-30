@@ -10,6 +10,7 @@ import { passwordValidator , type PasswordValidatorSchemaType } from "@/db/valid
 import { toast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { resolveAuthError } from "@/lib/error-messages";
 
 
 
@@ -37,7 +38,12 @@ export default function ResetPasswordForm({token}: { token: string }) {
                 return;
             }
             if (error) {
-                form.setError("root", { message: "Something went wrong. Please try again." })
+                form.setError("root", {
+                    message: resolveAuthError(
+                        error,
+                        "We couldn't reset your password. Please try again in a moment."
+                    ),
+                })
                 return;
             }
 

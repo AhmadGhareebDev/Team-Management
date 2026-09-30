@@ -219,15 +219,22 @@ export async function editProjectInfo({workspaceId, projectId, data}: {workspace
             return { success: false, error: "FORBIDDEN" }
         }
 
+        const parsedData = insertProjectSchema.safeParse(data);
+
+        if (!parsedData.success) {
+            return { success: false, error: "INVALID_DATA" }
+        }
+
 
         await db.update(project)
                 .set({
-                    name: data.name,
-                    description: data.description,
+                    name: parsedData.data.name,
+                    description: parsedData.data.description,
                 })
                 .where(eq(project.id, projectId));
 
-                
+        return { success: true }
+
     } catch (error) {
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
     }

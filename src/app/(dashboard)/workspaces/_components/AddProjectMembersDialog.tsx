@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/toast"
 import { addProjectMember } from "@/actions/project"
 import { authClient } from "@/lib/auth-client"
 import type { WorkspaceMemberWithUser } from "@/db/queries/workspaces"
+import { resolveActionError } from "@/lib/error-messages"
 
 export default function AddProjectMembersDialog({
   open,
@@ -46,16 +47,15 @@ export default function AddProjectMembersDialog({
       if (result?.error) {
         toast.add({
           type: "error",
-          description:
-            result.error === "ALREADY_MEMBER"
-              ? "This user is already in the project."
-              : result.error === "NOT_WORKSPACE_MEMBER"
-                ? "This user is not a member of the workspace."
-                : result.error === "FORBIDDEN"
-                  ? "You don't have permission to add members."
-                  : result.error === "PROJECT_NOT_FOUND"
-                    ? "Project not found."
-                    : "Something went wrong. Please try again.",
+          description: resolveActionError(
+            result.error,
+            "We couldn't add this member to the project. Please try again.",
+            {
+              ALREADY_MEMBER: "This user is already in the project.",
+              NOT_WORKSPACE_MEMBER: "This user is not a member of the workspace.",
+              FORBIDDEN: "You don't have permission to add members.",
+            }
+          ),
         })
         return
       }

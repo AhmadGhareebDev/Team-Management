@@ -16,6 +16,7 @@ import {
   insertProjectSchema,
   type InsertProjectSchemaType,
 } from "@/db/validations"
+import { resolveActionError } from "@/lib/error-messages"
 
 export function CreateProject({workspaceId , role} : {workspaceId: string,  role: WorkspaceRole | null}) {
   const router = useRouter()
@@ -54,10 +55,13 @@ export function CreateProject({workspaceId , role} : {workspaceId: string,  role
               form.setError("root", { message: "Invalid data. Please check your input." })
               return
             }
-            if (result.error === "INTERNAL_ERROR") {
-              form.setError("root", { message: "Something went wrong , please try again later." })
-              return
-            }
+            form.setError("root", {
+              message: resolveActionError(
+                result.error,
+                "We couldn't create this project. Please try again in a moment."
+              ),
+            })
+            return
           }
 
           if (result?.success) {

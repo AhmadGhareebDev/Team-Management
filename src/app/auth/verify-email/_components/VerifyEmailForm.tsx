@@ -49,6 +49,13 @@ export default function VerifyEmailForm({ email }: VerifyEmailFormProps) {
       })
       return;
     }
+    if (error) {
+      toast.add({
+        type: "error",
+        description: "We couldn't send a new code. Please try again in a moment.",
+      })
+      return;
+    }
     toast.add({ type: "success", description: "A new code has been sent." })
   }
 

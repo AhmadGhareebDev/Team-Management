@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { Spinner } from "@/components/ui/spinner"
 import { useResendCooldown } from "@/hooks/use-resend-cooldown";
+import { resolveAuthError } from "@/lib/error-messages";
 
 
 export default function Login() {
@@ -60,7 +61,10 @@ export default function Login() {
                 return
              }
             form.setError("root", {
-               message: "Something went wrong. Please try again later."
+               message: resolveAuthError(
+                  error,
+                  "We couldn't log you in. Please try again in a moment."
+               ),
          });
           })
     }

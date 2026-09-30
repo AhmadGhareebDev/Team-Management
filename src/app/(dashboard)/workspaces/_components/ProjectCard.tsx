@@ -28,16 +28,9 @@ import { authClient } from "@/lib/auth-client"
 import { deleteProject, editProjectInfo } from "@/actions/project"
 import { insertProjectSchema, type InsertProjectSchemaType } from "@/db/validations"
 import { cn } from "@/lib/utils"
+import { resolveActionError } from "@/lib/error-messages"
 
 const MAX_AVATARS = 4
-
-const projectErrorMessages: Record<string, string> = {
-  UNAUTHENTICATED: "You must be logged in.",
-  UNAUTHORIZED: "You are not a member of this workspace.",
-  FORBIDDEN: "You don't have permission to do this.",
-  PROJECT_NOT_FOUND: "Project not found.",
-  INTERNAL_SERVER_ERROR: "Something went wrong, please try again later.",
-}
 
 export default function ProjectCard({
   project,
@@ -100,7 +93,10 @@ export default function ProjectCard({
       const result = await editProjectInfo({ workspaceId, projectId: project.id, data })
       if (result?.error) {
         editForm.setError("root", {
-          message: projectErrorMessages[result.error] ?? result.error,
+          message: resolveActionError(
+            result.error,
+            "We couldn't update this project. Please try again in a moment."
+          ),
         })
         return
       }
@@ -115,7 +111,10 @@ export default function ProjectCard({
       const result = await deleteProject({ workspaceId, projectId: project.id })
       if (result?.error) {
         deleteForm.setError("root", {
-          message: projectErrorMessages[result.error] ?? result.error,
+          message: resolveActionError(
+            result.error,
+            "We couldn't delete this project. Please try again in a moment."
+          ),
         })
         return
       }
@@ -136,27 +135,25 @@ export default function ProjectCard({
       size="sm"
       onClick={handleCardClick}
       className={cn(
-        "group/card relative cursor-pointer border-0 transition-all duration-300",
-        "bg-gradient-to-br from-primary/[0.03] via-transparent to-transparent hover:from-primary/[0.08]",
-        "hover:shadow-md hover:ring-foreground/15"
+        "group/card cursor-pointer border-0 bg-card transition-colors duration-200",
+        "hover:bg-muted/50"
       )}
     >
       <CardContent className="flex flex-col gap-4 p-5">
         {/* Top Bar: Icon + Title + Actions */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-muted/60 text-foreground transition-colors group-hover/card:bg-primary group-hover/card:text-primary-foreground">
-              <Folder className="h-4 w-4" />
-            </div>
-            <h3 className="truncate text-base font-semibold tracking-tight text-foreground">
-              <Link
-                href={`/workspaces/${workspaceId}/project/${project.id}`}
-                className="hover:underline focus:outline-none"
-              >
-                {project.name}
-              </Link>
-            </h3>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-muted text-foreground transition-colors duration-200 group-hover/card:bg-primary group-hover/card:text-primary-foreground">
+            <Folder className="h-4 w-4" />
           </div>
+
+          <h3 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight text-foreground">
+            <Link
+              href={`/workspaces/${workspaceId}/project/${project.id}`}
+              className="hover:underline focus:outline-none"
+            >
+              {project.name}
+            </Link>
+          </h3>
 
           {isManager && (
             <DropdownMenu>

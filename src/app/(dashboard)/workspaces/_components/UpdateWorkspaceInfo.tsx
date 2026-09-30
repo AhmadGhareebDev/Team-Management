@@ -11,6 +11,7 @@ import { updateWorkspaceInfo } from "@/actions/workspace"
 import { insertWorkspaceSchema, type InsertWorkspaceSchemaType } from "@/db/validations"
 import { useAuthGate } from "@/components/web/AuthGateProvider"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
+import { resolveActionError } from "@/lib/error-messages"
 
 export default function UpdateWorkspaceInfo({
   workspaceId,
@@ -57,10 +58,13 @@ export default function UpdateWorkspaceInfo({
               form.setError("root", { message: "Only owners and admins can change the workspace name." })
               return
             }
-            if (result.error === "INTERNAL_ERROR") {
-              form.setError("root", { message: "Something went wrong, please try again later." })
-              return
-            }
+            form.setError("root", {
+              message: resolveActionError(
+                result.error,
+                "We couldn't update this workspace. Please try again in a moment."
+              ),
+            })
+            return
           }
 
           if (result?.success) {

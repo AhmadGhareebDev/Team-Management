@@ -38,6 +38,7 @@ import {
 } from "@/actions/task"
 import { addSubtask, toggleSubtask, deleteSubtask } from "@/actions/subtask"
 import { insertTaskSchema, type InsertTaskSchemaType, type UpdateTaskSchemaType } from "@/db/validations"
+import { actionErrorMessages } from "@/lib/error-messages"
 import type { ProjectTask } from "@/db/queries/task"
 import type { ProjectWithMembers } from "@/db/queries/project"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
@@ -97,7 +98,7 @@ const canvasErrorMessages: Record<string, string> = {
   BLOCKED_DEPENDENCY: "Some dependencies aren't done yet.",
   INVALID_ASSIGNEE: "One of the selected members isn't in this project.",
   SUBTASK_NOT_FOUND: "Subtask not found.",
-  INTERNAL_SERVER_ERROR: "Something went wrong, please try again.",
+  INTERNAL_SERVER_ERROR: actionErrorMessages.INTERNAL_SERVER_ERROR,
 }
 
 function FocusOnTask({ taskId }: { taskId?: string | null }) {

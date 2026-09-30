@@ -18,6 +18,7 @@ import { searchUsersByUsername } from "@/actions/user"
   import type { SearchedUser } from "@/actions/user"
   import { inviteUserToWorkspace } from "@/actions/workspace"
 import { cn } from "@/lib/utils"
+import { resolveActionError } from "@/lib/error-messages"
 
 export default function InviteMembersDialog({
   open,
@@ -69,13 +70,17 @@ export default function InviteMembersDialog({
       const result = await inviteUserToWorkspace({ workspaceId, inviteeId })
 
       if (result?.error) {
-        if (result.error === "ALREADY_MEMBER") {
-          toast.add({ type: "error", description: "This user is already a member of the workspace." })
-        } else if (result.error === "ALREADY_INVITED") {
-          toast.add({ type: "error", description: "This user has already been invited." })
-        } else {
-          toast.add({ type: "error", description: "Something went wrong. Please try again." })
-        }
+        toast.add({
+          type: "error",
+          description: resolveActionError(
+            result.error,
+            "We couldn't send the invitation. Please try again.",
+            {
+              ALREADY_MEMBER: "This user is already a member of the workspace.",
+              ALREADY_INVITED: "This user has already been invited to the workspace.",
+            }
+          ),
+        })
         return
       }
 

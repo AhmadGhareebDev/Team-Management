@@ -18,6 +18,7 @@ import { respondInvitation } from "@/actions/workspace"
 import { markNotificationAsRead } from "@/actions/notifications"
 import type { Notification } from "@/db/queries/notifications"
 import { cn } from "@/lib/utils"
+import { resolveActionError } from "@/lib/error-messages"
 
 const taskTypes = [
   "task_assigned",
@@ -93,7 +94,7 @@ export default function NotificationRow({
     } catch {
       toast.add({
         type: "error",
-        description: "Could not update this notification.",
+        description: "We couldn't open this notification. Please try again.",
       })
     }
   }
@@ -108,27 +109,18 @@ export default function NotificationRow({
       })
 
       if (result?.error) {
-        if (result.error === "UNAUTHENTICATED") {
-          toast.add({
-            type: "error",
-            description: "You must be logged in to respond to an invitation.",
-          })
-        } else if (result.error === "NOT_FOUND") {
-          toast.add({
-            type: "error",
-            description: "This invitation could not be found.",
-          })
-        } else if (result.error === "ALREADY_HANDLED") {
-          toast.add({
-            type: "error",
-            description: "This invitation has already been handled.",
-          })
-        } else if (result.error === "INTERNAL_SERVER_ERROR") {
-          toast.add({
-            type: "error",
-            description: "An error occurred while responding. Please try again later.",
-          })
-        }
+        toast.add({
+          type: "error",
+          description: resolveActionError(
+            result.error,
+            "We couldn't respond to this invitation. Please try again.",
+            {
+              UNAUTHENTICATED: "You must be logged in to respond to an invitation.",
+              NOT_FOUND: "This invitation could not be found.",
+              ALREADY_HANDLED: "This invitation has already been handled.",
+            }
+          ),
+        })
         return
       }
 

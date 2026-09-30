@@ -12,6 +12,7 @@ import NotificationRow from "@/components/web/NotificationRow"
 import { markAllNotificationsAsRead } from "@/actions/notifications"
 import type { Notification } from "@/db/queries/notifications"
 import { cn } from "@/lib/utils"
+import { resolveActionError } from "@/lib/error-messages"
 
 type NotificationTab = "invitations" | "tasks" | "members"
 
@@ -69,7 +70,10 @@ export default function NotificationsPage({
       if (result?.error) {
         toast.add({
           type: "error",
-          description: "Could not mark notifications as read.",
+          description: resolveActionError(
+            result.error,
+            "We couldn't mark your notifications as read. Please try again."
+          ),
         })
         return
       }
