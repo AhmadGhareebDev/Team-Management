@@ -34,6 +34,8 @@ export const actionErrorMessages: Record<string, string> = {
   NOT_WORKSPACE_MEMBER: "This user isn't a member of this workspace.",
   NOT_PROJECT_MEMBER: "This user isn't a member of this project.",
   INVALID_TRANSITION: "That change isn't allowed for this member.",
+  INVALID_STATUS_TRANSITION:
+    "This task can't move to that status from where it is now.",
 
   BLOCKED_DEPENDENCY: "This task is still waiting on other tasks.",
   SELF_DEPENDENCY: "A task can't depend on itself.",

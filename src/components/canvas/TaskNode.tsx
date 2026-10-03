@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type SyntheticEvent } from "react"
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react"
-import { AlertCircle, Calendar, Check, Clock, Plus, Trash2, ListCheck } from "lucide-react"
+import { AlertCircle, Calendar, Check, ChevronRight, Clock, Plus, Trash2, ListCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import type { ProjectTask } from "@/db/queries/task"
-import type { UpdateTaskSchemaType } from "@/db/validations"
+import { allowedTaskTransitions, type UpdateTaskSchemaType } from "@/db/validations"
 
 export type OptimisticApi = {
   toggleTaskStatus: (taskId: string, nextStatus: ProjectTask["status"]) => void
@@ -148,8 +148,14 @@ export default function TaskNode({ data, selected }: NodeProps) {
   const isBlocked = pendingBlockers.length > 0
   const isDone = task.status === "done"
   const isAssignee = task.assignees.some((a) => a.user.id === currentUserId)
-  const canToggleStatus = isManager || isAssignee
+  // Only assignees move a task. With nobody assigned, managers may still do it
+  // so an unassigned task is never stranded. Mirrors updateTaskStatus.
+  const canToggleStatus =
+    isAssignee || (isManager && task.assignees.length === 0)
   const canManageSubtasks = isManager || isAssignee
+  // Only the person who created a subtask may tick it off.
+  const canToggleSubtask = (subtask: ProjectTask["subtasks"][number]) =>
+    canManageSubtasks && subtask.createdBy.id === currentUserId
   const overdue = task.dueDate && new Date(task.dueDate) < new Date() && !isDone
   const overdueBlockers = task.blockedBy.filter(
     (d) => d.dependsOn.status !== "done" && d.dependsOn.dueDate != null && new Date(d.dependsOn.dueDate) < new Date()
@@ -164,9 +170,14 @@ export default function TaskNode({ data, selected }: NodeProps) {
     ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(task.dueDate))
     : null
 
-  const handleToggleDone = () => {
-    if (!canToggleStatus || isBlocked) return
-    optimistic.toggleTaskStatus(task.id, isDone ? "todo" : "done")
+  // The quick button walks the same chain as the details dropdown, one step at a
+  // time, so a skip like in_progress -> done can never be sent to the server.
+  const nextStatus = allowedTaskTransitions(task.status)[0] ?? null
+  const canAdvance = Boolean(nextStatus) && canToggleStatus && !isBlocked
+
+  const handleAdvanceStatus = () => {
+    if (!nextStatus || !canAdvance) return
+    optimistic.toggleTaskStatus(task.id, nextStatus)
   }
 
   const handleAddSubtask = (event: SyntheticEvent) => {
@@ -217,26 +228,28 @@ export default function TaskNode({ data, selected }: NodeProps) {
               onClick={(e) => {
                 e.stopPropagation()
                 e.preventDefault()
-                handleToggleDone()
+                handleAdvanceStatus()
               }}
-              disabled={!canToggleStatus || isBlocked}
+              disabled={!canAdvance}
               title={
                 isBlocked
                   ? `Complete first: ${pendingBlockers.map((p) => p.dependsOn.title).join(", ")}`
-                  : canToggleStatus
-                    ? isDone ? "Mark as not done" : "Mark as done"
-                    : "Only assigned members can complete this task"
+                  : !canToggleStatus
+                    ? "Only assigned members can move this task along"
+                    : nextStatus
+                      ? `Move to ${statusLabels[nextStatus]}`
+                      : "No further status available"
               }
-              aria-label={isDone ? "Mark task as not done" : "Mark task as done"}
+              aria-label={nextStatus ? `Move task to ${statusLabels[nextStatus]}` : "No further status available"}
               className={cn(
                 "nodrag mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border transition-all duration-150 shadow-xs",
                 isDone
                   ? "border-emerald-500 bg-emerald-500 text-white"
-                  : "border-muted-foreground/40 bg-background hover:border-emerald-500 hover:text-emerald-500",
-                (!canToggleStatus || isBlocked) && "cursor-not-allowed opacity-40"
+                  : "border-muted-foreground/40 bg-background hover:border-primary hover:text-primary",
+                !canAdvance && "cursor-not-allowed opacity-40"
               )}
             >
-              {isDone && <Check className="size-2.5" strokeWidth={3} />}
+              {isDone ? <Check className="size-2.5" strokeWidth={3} /> : <ChevronRight className="size-2.5" strokeWidth={3} />}
             </button>
           </div>
 
@@ -330,14 +343,19 @@ export default function TaskNode({ data, selected }: NodeProps) {
                       e.preventDefault()
                       optimistic.toggleSubtask(task.id, subtask.id)
                     }}
-                    disabled={!canManageSubtasks}
+                    disabled={!canToggleSubtask(subtask)}
+                    title={
+                      canToggleSubtask(subtask)
+                        ? undefined
+                        : "Only the person who created this subtask can tick it off"
+                    }
                     aria-label={subtask.isDone ? "Mark subtask as not done" : "Mark subtask as done"}
                     className={cn(
                       "flex size-3.5 shrink-0 items-center justify-center rounded-full border transition-all shadow-2xs",
                       subtask.isDone
                         ? "border-emerald-500 bg-emerald-500 text-white"
                         : "border-muted-foreground/40 bg-background hover:border-emerald-500 hover:text-emerald-500",
-                      !canManageSubtasks && "cursor-not-allowed opacity-40"
+                      !canToggleSubtask(subtask) && "cursor-not-allowed opacity-40"
                     )}
                   >
                     {subtask.isDone && <Check className="size-2" strokeWidth={3} />}

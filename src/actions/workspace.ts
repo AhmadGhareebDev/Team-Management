@@ -172,18 +172,17 @@ export async function inviteUserToWorkspace({workspaceId , inviteeId} : {workspa
     try {
         let invitationId: string;
 
-        if (existingInvitation && existingInvitation.status === "declined") {
+        if (existingInvitation) {
+            // A unique index on (workspace_id, invitee_id) means there is exactly
+            // one invitation slot per person, so a stale declined/accepted row
+            // must be reused instead of inserted again. Pending already returned
+            // ALREADY_INVITED above.
             invitationId = existingInvitation.id;
             await db.update(workspaceInvitation).set({
                 status: "pending",
                 inviterId: session.user.id,
                 updatedAt: new Date(),
-            }).where(
-                and(
-                    eq(workspaceInvitation.workspaceId, workspaceId),
-                    eq(workspaceInvitation.inviteeId, inviteeId)
-                )
-            )
+            }).where(eq(workspaceInvitation.id, existingInvitation.id))
         } else {
             invitationId = randomUUID();
             await db.insert(workspaceInvitation).values({
@@ -195,18 +194,34 @@ export async function inviteUserToWorkspace({workspaceId , inviteeId} : {workspa
             })
         }
 
-        await db.insert(notification).values({
-            id: randomUUID(),
-            userId: inviteeId,
-            actorId: session.user.id,
-            workspaceId,
-            workspaceInvitationId: invitationId,
-            type: "workspace_invitation",
-            body: `You have been invited to join a workspace.`,
-        })
+        // One notification per invitation. Re-inviting re-arms the existing row
+        // (unread again, and bumped so it sorts to the top) instead of appending
+        // a duplicate that would show a second Accept/Decline pair.
+        const rearmed = await db
+            .update(notification)
+            .set({ isRead: false, createdAt: new Date() })
+            .where(
+                and(
+                    eq(notification.userId, inviteeId),
+                    eq(notification.workspaceInvitationId, invitationId)
+                )
+            )
+
+        if (rearmed.rowCount === 0) {
+            await db.insert(notification).values({
+                id: randomUUID(),
+                userId: inviteeId,
+                actorId: session.user.id,
+                workspaceId,
+                workspaceInvitationId: invitationId,
+                type: "workspace_invitation",
+                body: `You have been invited to join a workspace.`,
+            })
+        }
         return { success: true }
 
     } catch (error) {
+        console.error("Error inviting user to workspace:", error)
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
 
     }

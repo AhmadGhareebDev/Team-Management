@@ -41,7 +41,12 @@ function matchesTab(
   tab: NotificationTab
 ): boolean {
   if (tab === "invitations") return notification.type === "workspace_invitation"
-  if (tab === "members") return notification.type === "member_removed"
+  if (tab === "members") {
+    return (
+      notification.type === "member_removed" ||
+      notification.type === "project_member_added"
+    )
+  }
   return (taskTypes as readonly string[]).includes(notification.type)
 }
 
@@ -52,19 +57,22 @@ export function NotificationsDropdown({
 }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = React.useState<NotificationTab>("invitations")
-  const [handledIds, setHandledIds] = React.useState<Set<string>>(() => new Set())
+  const [readIds, setReadIds] = React.useState<Set<string>>(() => new Set())
   const [isMarkingAll, startMarkAllTransition] = useTransition()
 
-  const items = React.useMemo(
-    () => notifications.filter((n) => !handledIds.has(n.id)),
-    [notifications, handledIds]
+  // Notifications are never removed from the list. Marking as read only
+  // clears the unread dot, so track it locally until the server catches up.
+  const isLocallyRead = (n: Notification) => n.isRead || readIds.has(n.id)
+
+  const unreadCount = React.useMemo(
+    () => notifications.filter((n) => !n.isRead && !readIds.has(n.id)).length,
+    [notifications, readIds]
   )
 
-  const unreadCount = items.filter((n) => !n.isRead).length
-  const visible = items.filter((n) => matchesTab(n, activeTab))
+  const visible = notifications.filter((n) => matchesTab(n, activeTab))
 
-  const handleHandled = (id: string) => {
-    setHandledIds((prev) => new Set(prev).add(id))
+  const handleRead = (id: string) => {
+    setReadIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)))
   }
 
   const handleMarkAll = () => {
@@ -82,13 +90,7 @@ export function NotificationsDropdown({
         return
       }
 
-      setHandledIds((prev) => {
-        const next = new Set(prev)
-        for (const n of notifications) {
-          if (!n.isRead) next.add(n.id)
-        }
-        return next
-      })
+      setReadIds(new Set(notifications.map((n) => n.id)))
       router.refresh()
       toast.add({
         type: "success",
@@ -151,8 +153,8 @@ export function NotificationsDropdown({
               {visible.map((notification) => (
                 <li key={notification.id}>
                   <NotificationRow
-                    notification={notification}
-                    onHandled={handleHandled}
+                    notification={{ ...notification, isRead: isLocallyRead(notification) }}
+                    onRead={handleRead}
                   />
                 </li>
               ))}

@@ -128,15 +128,15 @@ export async function toggleSubtask({
             eq(subtask.id, subtaskId),
             eq(subtask.taskId, taskId)
         ),
-        columns: { id: true, isDone: true },
+        columns: { id: true, isDone: true, createdBy: true },
     })
 
     if (!subtaskRow) {
         return { success: false, error: "SUBTASK_NOT_FOUND" }
     }
 
-    const canToggle = await canManageSubtasks(access, taskId, session.user.id)
-    if (!canToggle) {
+    // Only the creator gets to tick a subtask off.
+    if (subtaskRow.createdBy !== session.user.id) {
         return { success: false, error: "FORBIDDEN" }
     }
 

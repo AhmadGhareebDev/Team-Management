@@ -11,6 +11,7 @@ import { insertTaskSchema,
     type UpdateTaskSchemaType,
     taskStatusSchema,
     type TaskStatusSchemaType,
+    canTransitionTaskStatus,
     taskPositionSchema,
     type TaskPositionSchemaType,
     taskAssigneesSchema,
@@ -264,24 +265,26 @@ export async function updateTaskStatus({
 
     const existing = await db.query.task.findFirst({
         where: and(eq(task.id, taskId), eq(task.projectId, projectId)),
-        columns: { id: true, title: true },
+        columns: { id: true, title: true, status: true },
     })
 
     if (!existing) {
         return { success: false, error: "TASK_NOT_FOUND" }
     }
 
-    const assignment = await db.query.taskAssignees.findFirst({
-        where: and(
-            eq(taskAssignees.taskId, taskId),
-            eq(taskAssignees.userId, session.user.id)
-        ),
-        columns: { id: true },
+    const assignees = await db.query.taskAssignees.findMany({
+        where: eq(taskAssignees.taskId, taskId),
+        columns: { id: true, userId: true },
     })
 
+    // A task belongs to the people assigned to it, so only assignees may move
+    // it. A task nobody is assigned to would otherwise be stranded, so owners
+    // and admins keep access to those.
     const isManager = access.role === "owner" || access.role === "admin"
+    const isAssignee = assignees.some((a) => a.userId === session.user.id)
+    const canChangeStatus = isAssignee || (isManager && assignees.length === 0)
 
-    if (!isManager && !assignment) {
+    if (!canChangeStatus) {
         return { success: false, error: "FORBIDDEN" }
     }
 
@@ -296,6 +299,15 @@ export async function updateTaskStatus({
         if (hasPendingDeps) {
             return { success: false, error: "BLOCKED_DEPENDENCY" }
         }
+    }
+
+    // "blocked" is derived from dependencies, never chosen by a user.
+    if (parsed.data.status === "blocked") {
+        return { success: false, error: "INVALID_STATUS_TRANSITION" }
+    }
+
+    if (!canTransitionTaskStatus(existing.status, parsed.data.status)) {
+        return { success: false, error: "INVALID_STATUS_TRANSITION" }
     }
 
     let unblockedDependents: string[] = []

@@ -1,8 +1,8 @@
 "use server"
 import { randomUUID } from "crypto"
 import { db } from "@/db"
-import { project, projectMembers, workspaceMembers } from "@/db/schemas"
-import { eq, and } from "drizzle-orm"
+import { project, projectMembers, workspaceMembers, task, taskAssignees, notification } from "@/db/schemas"
+import { eq, and, inArray } from "drizzle-orm"
 import { insertProjectSchema, type InsertProjectSchemaType } from "@/db/validations"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
@@ -78,7 +78,8 @@ export async function addProjectMember({
         where: and(
             eq(project.id, projectId),
             eq(project.workspaceId, workspaceId)
-        )
+        ),
+        columns: { id: true, name: true }
     })
 
     if (!projectBelongsToWorkspace) {
@@ -129,6 +130,22 @@ export async function addProjectMember({
             projectId,
             userId,
         })
+
+        // The added member should find out straight away. A notification
+        // failure must never undo the membership itself.
+        try {
+            await db.insert(notification).values({
+                id: randomUUID(),
+                userId,
+                actorId: session.user.id,
+                workspaceId,
+                projectId,
+                type: "project_member_added",
+                body: `${session.user.name ?? "Someone"} added you to the project "${projectBelongsToWorkspace.name}".`,
+            })
+        } catch (error) {
+            console.error("Error notifying added project member:", error)
+        }
 
         return { success: true }
     } catch {
@@ -287,11 +304,75 @@ export async function removeProjectMember({ workspaceId, projectId, userId }: { 
             return { success: false, error: "NOT_PROJECT_MEMBER" }
         }
 
-        await db.delete(projectMembers)
-            .where(and(
-                eq(projectMembers.projectId, projectId),
-                eq(projectMembers.userId, userId)
-            ));
+        const projectTaskIds = await db.query.task.findMany({
+            where: eq(task.projectId, projectId),
+            columns: { id: true, title: true },
+        })
+
+        const taskIds = projectTaskIds.map((t) => t.id)
+
+        const memberAssignments =
+            taskIds.length > 0
+                ? await db.query.taskAssignees.findMany({
+                    where: and(
+                        eq(taskAssignees.userId, userId),
+                        inArray(taskAssignees.taskId, taskIds)
+                    ),
+                    columns: { taskId: true },
+                })
+                : []
+
+        // Captured before the delete below so the notification can say which
+        // tasks the person lost.
+        const removedTitles = projectTaskIds
+            .filter((t) => memberAssignments.some((a) => a.taskId === t.id))
+            .map((t) => t.title)
+
+        // Drop their assignments in this project's tasks too, otherwise they keep
+        // tasks they can no longer open (task_assignees has no project_members FK).
+        await db.batch([
+            db.delete(projectMembers)
+                .where(and(
+                    eq(projectMembers.projectId, projectId),
+                    eq(projectMembers.userId, userId)
+                )),
+            ...(taskIds.length > 0
+                ? [
+                    db.delete(taskAssignees).where(and(
+                        eq(taskAssignees.userId, userId),
+                        inArray(taskAssignees.taskId, taskIds)
+                    )),
+                ]
+                : []),
+        ])
+
+        // Tell the person who was removed, but never let a notification failure
+        // turn a completed removal into an error.
+        try {
+            const projectRow = await db.query.project.findFirst({
+                where: eq(project.id, projectId),
+                columns: { name: true },
+            })
+
+            const actorName = session.user.name ?? "An admin"
+            const projectName = projectRow?.name ?? "the project"
+            const body =
+                removedTitles.length > 0
+                    ? `${actorName} removed you from the project "${projectName}". Tasks now unassigned: ${removedTitles.map((t) => `"${t}"`).join(", ")}.`
+                    : `${actorName} removed you from the project "${projectName}".`
+
+            await db.insert(notification).values({
+                id: randomUUID(),
+                userId,
+                actorId: session.user.id,
+                workspaceId,
+                projectId,
+                type: "member_removed",
+                body,
+            })
+        } catch (error) {
+            console.error("Error notifying removed project member:", error)
+        }
 
         return { success: true }
 

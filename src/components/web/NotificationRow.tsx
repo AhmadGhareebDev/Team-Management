@@ -63,11 +63,9 @@ function initials(name: string) {
 
 export default function NotificationRow({
   notification,
-  onHandled,
   onRead,
 }: {
   notification: Notification
-  onHandled?: (id: string) => void
   onRead?: (id: string) => void
 }) {
   const router = useRouter()
@@ -125,7 +123,8 @@ export default function NotificationRow({
       }
 
       if (result.success) {
-        onHandled?.(notification.id)
+        // The row stays in the list; the refreshed status swaps the buttons
+        // for an "accepted"/"declined" label.
         router.refresh()
         toast.add({
           type: "success",
@@ -142,6 +141,10 @@ export default function NotificationRow({
 
   if (notification.type === "workspace_invitation") {
     const actor = notification.actor
+    // The invitation row itself is the source of truth: once answered, the
+    // Accept/Decline buttons must not come back on the next render.
+    const invitationStatus = notification.workspaceInvitation?.status ?? "pending"
+    const isPending = invitationStatus === "pending"
     return (
       <div className="flex items-start gap-3 px-4 py-3">
         <ImageKitAvatar
@@ -165,30 +168,36 @@ export default function NotificationRow({
           <p className="mt-1 text-[15px] text-muted-foreground">
             {formatRelativeTime(notification.createdAt)}
           </p>
-          <div className="mt-2 flex items-center gap-2">
-            <Button
-              variant="default"
-              size="xs"
-              disabled={action !== null}
-              onClick={() => handleAction("accepted")}
-            >
-              {action === "accepted" && (
-                <Spinner data-icon="inline-start" className="size-3" />
-              )}
-              Accept
-            </Button>
-            <Button
-              variant="outline"
-              size="xs"
-              disabled={action !== null}
-              onClick={() => handleAction("declined")}
-            >
-              {action === "declined" && (
-                <Spinner data-icon="inline-start" className="size-3" />
-              )}
-              Decline
-            </Button>
-          </div>
+          {isPending ? (
+            <div className="mt-2 flex items-center gap-2">
+              <Button
+                variant="default"
+                size="xs"
+                disabled={action !== null}
+                onClick={() => handleAction("accepted")}
+              >
+                {action === "accepted" && (
+                  <Spinner data-icon="inline-start" className="size-3" />
+                )}
+                Accept
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={action !== null}
+                onClick={() => handleAction("declined")}
+              >
+                {action === "declined" && (
+                  <Spinner data-icon="inline-start" className="size-3" />
+                )}
+                Decline
+              </Button>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs font-medium text-muted-foreground">
+              {invitationStatus === "accepted" ? "Invitation accepted" : "Invitation declined"}
+            </p>
+          )}
         </div>
         {!notification.isRead && (
           <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
@@ -197,10 +206,14 @@ export default function NotificationRow({
     )
   }
 
-  if (notification.type === "member_removed") {
+  if (
+    notification.type === "member_removed" ||
+    notification.type === "project_member_added"
+  ) {
+    const AddedIcon = notification.type === "project_member_added" ? UserPlus : UserMinus
     return (
       <div className="flex items-start gap-3 px-4 py-3">
-        <UserMinus
+        <AddedIcon
           className={cn(
             "mt-0.5 size-4 shrink-0",
             notification.isRead ? "text-muted-foreground" : "text-foreground"

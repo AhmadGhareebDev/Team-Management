@@ -30,10 +30,41 @@ export const taskDependencySchema = z.object({
 export type TaskDependencySchemaType = z.infer<typeof taskDependencySchema>
 
 export const taskStatusSchema = z.object({
-    status: z.enum(["todo", "in_progress", "in_review", "done", "blocked"]),
+    status: z.enum(task.status.enumValues),
 })
 
 export type TaskStatusSchemaType = z.infer<typeof taskStatusSchema>
+
+export type TaskStatus = TaskStatusSchemaType["status"]
+
+/** Every status, in workflow order. */
+export const TASK_STATUSES = task.status.enumValues
+
+/**
+ * The only status moves a user is allowed to perform, per projectFeatures.md
+ * "todo -> in_progress -> in_review -> done". Anything may revert to "todo".
+ *
+ * "blocked" is derived: it is only ever set by the dependency recompute, never
+ * chosen by a user, so it has no outgoing transitions.
+ *
+ * Shared by the task details dropdown, the node quick-advance button and the
+ * server-side guard so the three can never drift apart.
+ */
+export const ALLOWED_TASK_TRANSITIONS = {
+    todo: ["in_progress"],
+    in_progress: ["in_review", "todo"],
+    in_review: ["done", "todo"],
+    done: ["todo"],
+    blocked: [],
+} as const satisfies Record<TaskStatus, readonly TaskStatus[]>
+
+export function allowedTaskTransitions(from: TaskStatus): readonly TaskStatus[] {
+    return ALLOWED_TASK_TRANSITIONS[from]
+}
+
+export function canTransitionTaskStatus(from: TaskStatus, to: TaskStatus): boolean {
+    return (ALLOWED_TASK_TRANSITIONS[from] as readonly TaskStatus[]).includes(to)
+}
 
 export const updateTaskSchema = z.object({
     title: z

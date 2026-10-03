@@ -8,13 +8,20 @@ import { Calendar, Check, Trash2, X, AlertCircle, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
-import { updateTaskSchema } from "@/db/validations"
+import { allowedTaskTransitions, TASK_STATUSES, updateTaskSchema, type TaskStatus } from "@/db/validations"
 import type { ProjectTask } from "@/db/queries/task"
 import type { ProjectWithMembers } from "@/db/queries/project"
 import type { OptimisticApi } from "@/components/canvas/TaskNode"
 
-const statusLabels: Record<ProjectTask["status"], string> = {
+const statusLabels: Record<TaskStatus, string> = {
   todo: "Todo",
   in_progress: "In Progress",
   in_review: "In Review",
@@ -22,7 +29,7 @@ const statusLabels: Record<ProjectTask["status"], string> = {
   blocked: "Blocked",
 }
 
-const statusBadge: Record<ProjectTask["status"], string> = {
+const statusBadge: Record<TaskStatus, string> = {
   todo: "bg-muted text-muted-foreground border-muted-foreground/20",
   in_progress: "bg-primary/10 text-primary border-primary/20",
   in_review: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
@@ -65,13 +72,18 @@ export default function TaskDetailsPanel({
 }) {
   const [isPending, startTransition] = useTransition()
   const isAssignee = task.assignees.some((a) => a.user.id === currentUserId)
-  const canToggleStatus = isManager || isAssignee
-  const isDone = task.status === "done"
+  // Mirrors updateTaskStatus: assignees move the task, and managers only when
+  // nobody is assigned yet.
+  const canToggleStatus =
+    isAssignee || (isManager && task.assignees.length === 0)
   const pendingBlockers = task.blockedBy.filter((d) => d.dependsOn.status !== "done")
   const isBlocked = pendingBlockers.length > 0
   const overdueBlockers = task.blockedBy.filter(
     (d) => d.dependsOn.status !== "done" && d.dependsOn.dueDate != null && new Date(d.dependsOn.dueDate) < new Date()
   )
+  // A blocked task has no user-selectable status, so the dropdown collapses to a badge.
+  const allowedStatuses = allowedTaskTransitions(task.status)
+  const canPickStatus = canToggleStatus && !isBlocked && allowedStatuses.length > 0
 
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>(() => task.assignees.map((a) => a.user.id))
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -104,9 +116,10 @@ export default function TaskDetailsPanel({
     setConfirmDelete(false)
   }, [open, task.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleToggleDone = () => {
+  const handleStatusChange = (next: unknown) => {
     if (!canToggleStatus || isBlocked) return
-    optimistic.toggleTaskStatus(task.id, isDone ? "todo" : "done")
+    if (typeof next !== "string" || next === task.status) return
+    optimistic.toggleTaskStatus(task.id, next as TaskStatus)
   }
 
   const handleSave = (data: z.output<typeof updateTaskSchema>) => {
@@ -163,21 +176,60 @@ export default function TaskDetailsPanel({
         <div className="space-y-2">
           <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Status</p>
           <div className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-muted/20 p-2.5">
-            <span className={cn("rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase", statusBadge[task.status])}>
-              {statusLabels[task.status]}
-            </span>
+            {canPickStatus ? (
+              <Select value={task.status} onValueChange={handleStatusChange}>
+                <SelectTrigger
+                  aria-label="Change task status"
+                  className="h-7! rounded-md border border-border/60 bg-background px-2 text-xs font-normal normal-case tracking-normal"
+                >
+                  <SelectValue>
+                    {(value) => {
+                      const shown =
+                        typeof value === "string" && value in statusLabels
+                          ? (value as TaskStatus)
+                          : task.status
+                      return (
+                        <span
+                          className={cn(
+                            "rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase",
+                            statusBadge[shown]
+                          )}
+                        >
+                          {statusLabels[shown]}
+                        </span>
+                      )
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start" className="min-w-40 rounded-md">
+                  {TASK_STATUSES.map((status) => (
+                    <SelectItem
+                      key={status}
+                      value={status}
+                      disabled={!allowedStatuses.includes(status)}
+                      className="text-xs font-medium"
+                    >
+                      {statusLabels[status]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span className={cn("rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase", statusBadge[task.status])}>
+                {statusLabels[task.status]}
+              </span>
+            )}
             {isBlocked ? (
               <p className="text-[10px] font-medium text-destructive truncate max-w-[140px]" title={`Blocked by ${pendingBlockers.map((d) => d.dependsOn.title).join(", ")}`}>
                 Blocked by {pendingBlockers.map((d) => d.dependsOn.title).join(", ")}
               </p>
-            ) : canToggleStatus ? (
-              <Button variant="outline" size="sm" onClick={handleToggleDone} className="h-7 text-xs font-medium border-border/60">
-                <Check className="size-3.5 mr-1 text-emerald-500" />
-                {isDone ? "Mark as todo" : "Mark done"}
-              </Button>
-            ) : (
-              <p className="text-[10px] text-muted-foreground">Assignees only</p>
-            )}
+            ) : !canToggleStatus ? (
+              <p className="text-[10px] text-muted-foreground">
+                {task.assignees.length === 0
+                  ? "Assign someone to move this task"
+                  : "Assignees only"}
+              </p>
+            ) : null}
           </div>
 
           {/* Blocked Alerts */}
@@ -248,9 +300,9 @@ export default function TaskDetailsPanel({
             <p className="text-xs text-destructive">{detailsForm.formState.errors.root.message}</p>
           )}
 
-          {isManager && (
+{isManager && (
             <Button type="submit" size="sm" disabled={isPending} className="w-full mt-2 font-medium">
-              Save changes
+              Save details
             </Button>
           )}
         </form>

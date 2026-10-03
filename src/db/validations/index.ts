@@ -37,8 +37,13 @@ export {
   type TaskDependencySchemaType,
 } from "./task"
 export {
-  taskStatusSchema,
-  type TaskStatusSchemaType,
+    taskStatusSchema,
+    type TaskStatusSchemaType,
+    type TaskStatus,
+    TASK_STATUSES,
+    ALLOWED_TASK_TRANSITIONS,
+    allowedTaskTransitions,
+    canTransitionTaskStatus,
 } from "./task"
 export {
   updateTaskSchema,

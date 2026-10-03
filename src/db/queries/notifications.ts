@@ -27,6 +27,12 @@ export async function getUserNotifications(userId: string, limit = 30) {
                     workspaceId: true,
                 },
             },
+            workspaceInvitation: {
+                columns: {
+                    id: true,
+                    status: true,
+                },
+            },
         },
     })
 }

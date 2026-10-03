@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, pgEnum, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "@/db/schemas/auth-schema"
 import { workspace } from "@/db/schemas/workspace"
 import { workspaceInvitation } from "@/db/schemas/workspaceInvitation"
@@ -15,6 +15,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "member_removed",
   "task_overdue",
   "workspace_invitation",
+  "project_member_added",
 ]);
 
 
@@ -33,6 +34,9 @@ export const notification = pgTable("notification", {
 }, (table) => [
   index("notification_user_created_idx").on(table.userId, table.createdAt),
   index("notification_workspace_invitation_id_idx").on(table.workspaceInvitationId),
+  // An invitation is one row that is re-armed on re-invite, so it must map to
+  // exactly one notification. NULLs (task notifications) are exempt.
+  uniqueIndex("notification_workspace_invitation_uidx").on(table.workspaceInvitationId),
   index("notification_project_id_idx").on(table.projectId),
   index("notification_task_id_idx").on(table.taskId),
 ]
@@ -60,5 +64,9 @@ export const notificationRelations = relations(notification, ({ one }) => ({
   task: one(task, {
     fields: [notification.taskId],
     references: [task.id],
+  }),
+  workspaceInvitation: one(workspaceInvitation, {
+    fields: [notification.workspaceInvitationId],
+    references: [workspaceInvitation.id],
   }),
 }));

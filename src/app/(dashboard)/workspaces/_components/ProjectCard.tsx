@@ -156,39 +156,44 @@ export default function ProjectCard({
           </h3>
 
           {isManager && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="shrink-0 text-muted-foreground hover:text-foreground"
-                    aria-label={`Actions for ${project.name}`}
-                  />
-                }
-              >
-                <EllipsisVertical className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem onClick={openEdit}>
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() =>
-                    require({
-                      role,
-                      requiredRole: ["owner", "admin"],
-                      onAllowed: () => setDeleteOpen(true),
-                    })
+            /* The menu renders in a portal, so React events from the trigger
+               and its items bubble up to the Card even though they are not DOM
+               descendants of it. Stop them here. */
+            <div data-stop-nav onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="shrink-0 text-muted-foreground hover:text-foreground"
+                      aria-label={`Actions for ${project.name}`}
+                    />
                   }
                 >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <EllipsisVertical className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onClick={openEdit}>
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() =>
+                      require({
+                        role,
+                        requiredRole: ["owner", "admin"],
+                        onAllowed: () => setDeleteOpen(true),
+                      })
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
         </div>
 
@@ -252,62 +257,69 @@ export default function ProjectCard({
         </div>
       </CardContent>
 
-      <Modal
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        title="Edit project"
-        description="Update the project's name and description."
-        confirmLabel="Save"
-        confirmDisabled={!editForm.formState.isValid || isEditPending}
-        confirmLoading={isEditPending}
-        onSubmit={editForm.handleSubmit(handleEditSubmit)}
-      >
-        <Field>
-          <FieldLabel>Project name</FieldLabel>
-          <Input placeholder="My project" {...editForm.register("name")} />
-          {editForm.formState.errors.name && (
-            <FieldError errors={[editForm.formState.errors.name]} />
+      {/* Dialogs also render through portals, so their clicks bubble up to the
+          Card too. Keep them from navigating. */}
+      <div data-stop-nav onClick={(e) => e.stopPropagation()}>
+        <Modal
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          title="Edit project"
+          description="Update the project's name and description."
+          confirmLabel="Save"
+          confirmDisabled={!editForm.formState.isValid || isEditPending}
+          confirmLoading={isEditPending}
+          onSubmit={editForm.handleSubmit(handleEditSubmit)}
+        >
+          <Field>
+            <FieldLabel>Project name</FieldLabel>
+            <Input placeholder="My project" {...editForm.register("name")} />
+            {editForm.formState.errors.name && (
+              <FieldError errors={[editForm.formState.errors.name]} />
+            )}
+          </Field>
+          <Field>
+            <FieldLabel>Project description</FieldLabel>
+            <Input
+              placeholder="My project description"
+              {...editForm.register("description")}
+            />
+            {editForm.formState.errors.description && (
+              <FieldError errors={[editForm.formState.errors.description]} />
+            )}
+          </Field>
+          {editForm.formState.errors.root && (
+            <p className="text-sm text-center text-red-400">
+              {editForm.formState.errors.root.message}
+            </p>
           )}
-        </Field>
-        <Field>
-          <FieldLabel>Project description</FieldLabel>
-          <Input placeholder="My project description" {...editForm.register("description")} />
-          {editForm.formState.errors.description && (
-            <FieldError errors={[editForm.formState.errors.description]} />
+        </Modal>
+
+        <Modal
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          title="Delete project"
+          description="This action is permanent and cannot be undone. Are you sure you want to delete this project?"
+          confirmLabel="Delete"
+          confirmVariant="destructive"
+          confirmLoading={isDeletePending}
+          onSubmit={deleteForm.handleSubmit(handleDeleteSubmit)}
+        >
+          {deleteForm.formState.errors.root && (
+            <p className="text-sm text-center text-red-400">
+              {deleteForm.formState.errors.root.message}
+            </p>
           )}
-        </Field>
-        {editForm.formState.errors.root && (
-          <p className="text-sm text-center text-red-400">
-            {editForm.formState.errors.root.message}
-          </p>
-        )}
-      </Modal>
+        </Modal>
 
-      <Modal
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete project"
-        description="This action is permanent and cannot be undone. Are you sure you want to delete this project?"
-        confirmLabel="Delete"
-        confirmVariant="destructive"
-        confirmLoading={isDeletePending}
-        onSubmit={deleteForm.handleSubmit(handleDeleteSubmit)}
-      >
-        {deleteForm.formState.errors.root && (
-          <p className="text-sm text-center text-red-400">
-            {deleteForm.formState.errors.root.message}
-          </p>
-        )}
-      </Modal>
-
-      <AddProjectMembersDialog
-        open={addMembersOpen}
-        onOpenChange={setAddMembersOpen}
-        workspaceId={workspaceId}
-        projectId={project.id}
-        members={members}
-        projectMemberIds={projectMemberIds}
-      />
+        <AddProjectMembersDialog
+          open={addMembersOpen}
+          onOpenChange={setAddMembersOpen}
+          workspaceId={workspaceId}
+          projectId={project.id}
+          members={members}
+          projectMemberIds={projectMemberIds}
+        />
+      </div>
     </Card>
   )
 }

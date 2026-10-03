@@ -2,6 +2,7 @@
 
 import { type WorkspaceWithRole } from "@/db/queries/workspaces"
 import { Card, CardHeader, CardTitle, CardAction, CardFooter } from "@/components/ui/card"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { ArrowUpRight, Building2 } from "lucide-react"
@@ -41,17 +42,25 @@ export function WorkSpaceCard({ workspace }: { workspace: WorkspaceWithRole }) {
       )}
     >
       <CardHeader>
-        <div className="flex items-center gap-3">
+        {/* min-w-0 lets this grid item shrink so the title truncates instead of
+            shoving the role badge out of the card. */}
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-muted font-mono text-sm font-bold text-foreground transition-colors duration-200 group-hover:bg-primary group-hover:text-primary-foreground">
             {initial ? initial : <Building2 className="h-4 w-4" />}
           </div>
 
-          <CardTitle
-            title={name}
-            className="min-w-0 flex-1 truncate text-base font-semibold normal-case tracking-normal"
-          >
-            {name}
-          </CardTitle>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <CardTitle className="min-w-0 flex-1 truncate text-base font-semibold normal-case tracking-normal" />
+              }
+            >
+              {name}
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6} className="z-50">
+              {name}
+            </TooltipContent>
+          </Tooltip>
 
           <CardAction className="static flex shrink-0 items-center">
             <RoleBadge role={role} />
