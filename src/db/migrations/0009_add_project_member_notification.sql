@@ -1,1 +1,1 @@
-ALTER TYPE "public"."notification_type" ADD VALUE IF NOT EXISTS 'project_member_added';
+ALTER TYPE "public"."notification_type" ADD VALUE 'project_member_added';

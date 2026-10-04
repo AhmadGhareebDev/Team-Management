@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { project , projectMembers , workspaceMembers } from "@/db/schemas";
-import { eq , and } from "drizzle-orm"
+import { eq , and , desc , exists } from "drizzle-orm"
 
 export async function getProjectById(projectId: string) {
     return await db.query.project.findFirst({
@@ -61,3 +61,40 @@ export async function getUserProjectAccess(projectId: string, userId: string) {
     };
 }
 export type UserProjectAccess = Awaited<ReturnType<typeof getUserProjectAccess>>;
+export async function getUserProjects(userId: string) {
+    return await db.query.project.findMany({
+        where: exists(
+            db
+                .select({ projectId: projectMembers.projectId })
+                .from(projectMembers)
+                .where(
+                    and(
+                        eq(projectMembers.projectId, project.id),
+                        eq(projectMembers.userId, userId)
+                    )
+                )
+        ),
+        orderBy: [desc(project.createdAt)],
+        columns: {
+            id: true,
+            name: true,
+            description: true,
+            workspaceId: true,
+        },
+        with: {
+            members: {
+                columns: {},
+                with: {
+                    user: {
+                        columns: {
+                            id: true,
+                            name: true,
+                            avatar_url: true,
+                        }
+                    }
+                }
+            }
+        },
+    });
+}
+export type UserProject = Awaited<ReturnType<typeof getUserProjects>>[number];

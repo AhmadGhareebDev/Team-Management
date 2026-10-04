@@ -7,4 +7,4 @@ WHERE n.workspace_invitation_id IS NOT NULL
   AND n.workspace_invitation_id = keep.workspace_invitation_id
   AND (n.created_at, n.id) < (keep.created_at, keep.id);
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "notification_workspace_invitation_uidx" ON "notification" USING btree ("workspace_invitation_id");
+CREATE UNIQUE INDEX "notification_workspace_invitation_uidx" ON "notification" USING btree ("workspace_invitation_id");

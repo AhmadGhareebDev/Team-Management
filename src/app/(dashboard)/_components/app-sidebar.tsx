@@ -13,7 +13,7 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
-import { Settings, LucideFolderMinus, BellRing } from "lucide-react"
+import { Settings, LucideFolderMinus, BellRing, ListTodo, FolderKanban } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 
 export function AppSidebar() {
@@ -52,6 +52,24 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarSeparator />
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>You</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="My Tasks" render={<Link href="/my-tasks" />}>
+                <ListTodo className="size-4" />
+                <span>My Tasks</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="My Projects" render={<Link href="/my-projects" />}>
+                <FolderKanban className="size-4" />
+                <span>My Projects</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarMenu>

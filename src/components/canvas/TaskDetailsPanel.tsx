@@ -17,25 +17,10 @@ import {
 } from "@/components/ui/select"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
 import { allowedTaskTransitions, TASK_STATUSES, updateTaskSchema, type TaskStatus } from "@/db/validations"
+import { statusBadge, statusLabels } from "@/lib/task-display"
 import type { ProjectTask } from "@/db/queries/task"
 import type { ProjectWithMembers } from "@/db/queries/project"
 import type { OptimisticApi } from "@/components/canvas/TaskNode"
-
-const statusLabels: Record<TaskStatus, string> = {
-  todo: "Todo",
-  in_progress: "In Progress",
-  in_review: "In Review",
-  done: "Done",
-  blocked: "Blocked",
-}
-
-const statusBadge: Record<TaskStatus, string> = {
-  todo: "bg-muted text-muted-foreground border-muted-foreground/20",
-  in_progress: "bg-primary/10 text-primary border-primary/20",
-  in_review: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  done: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-  blocked: "bg-destructive/10 text-destructive border-destructive/20",
-}
 
 const PRIORITIES = [
   { value: "low", label: "Low" },

@@ -2,8 +2,9 @@
 import { randomUUID } from "crypto"
 import { db } from "@/db"
 import { eq, and, inArray, ne } from "drizzle-orm"
-import { workspace, workspaceMembers, projectMembers, project, workspaceInvitation, notification, user, task, taskAssignees } from "@/db/schemas"
+import { workspace, workspaceMembers, projectMembers, project, workspaceInvitation, notification, user, taskAssignees } from "@/db/schemas"
 import { insertWorkspaceSchema, type InsertWorkspaceSchemaType } from "@/db/validations"
+import { getTasksAssignedToUserInProjects } from "@/db/queries/task"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 
@@ -470,44 +471,20 @@ export async function removeWorkspaceMember(workspaceId: string, memberId: strin
       return { success: false, error: "FORBIDDEN" }
     }
 
-    const workspaceProjectIds = db
-      .select({ id: project.id })
-      .from(project)
-      .where(eq(project.workspaceId, workspaceId))
-
     const projectIds = await db.query.project.findMany({
       where: eq(project.workspaceId, workspaceId),
       columns: { id: true },
     })
 
-    const projectTaskIds =
-      projectIds.length > 0
-        ? await db.query.task.findMany({
-            where: inArray(
-              task.projectId,
-              projectIds.map((p) => p.id)
-            ),
-            columns: { id: true, title: true },
-          })
-        : []
-
-    const taskIds = projectTaskIds.map((t) => t.id)
-
-    const memberAssignments =
-      taskIds.length > 0
-        ? await db.query.taskAssignees.findMany({
-            where: and(
-              eq(taskAssignees.userId, memberId),
-              inArray(taskAssignees.taskId, taskIds)
-            ),
-            columns: { taskId: true },
-          })
-        : []
-
-    const removedTaskIds = memberAssignments.map((a) => a.taskId)
-    const removedTitles = projectTaskIds
-      .filter((t) => removedTaskIds.includes(t.id))
-      .map((t) => t.title)
+    // Everything this member holds across the workspace's projects, in one
+    // query. The titles drive the "now unassigned" notification; the ids scope
+    // the assignment delete below to exactly those tasks.
+    const assignedTasks = await getTasksAssignedToUserInProjects({
+      projectIds: projectIds.map((p) => p.id),
+      userId: memberId,
+    })
+    const removedTaskIds = assignedTasks.map((t) => t.id)
+    const removedTitles = assignedTasks.map((t) => t.title)
 
     await db.batch([
       db.delete(workspaceMembers)
@@ -518,17 +495,17 @@ export async function removeWorkspaceMember(workspaceId: string, memberId: strin
       db.delete(projectMembers)
         .where(and(
           eq(projectMembers.userId, memberId),
-          inArray(projectMembers.projectId, workspaceProjectIds)
+          inArray(projectMembers.projectId, projectIds.map((p) => p.id))
         )),
+      ...(removedTaskIds.length > 0
+        ? [
+          db.delete(taskAssignees).where(and(
+            eq(taskAssignees.userId, memberId),
+            inArray(taskAssignees.taskId, removedTaskIds)
+          )),
+        ]
+        : []),
     ])
-
-    if (removedTaskIds.length > 0) {
-      await db.delete(taskAssignees)
-        .where(and(
-          eq(taskAssignees.userId, memberId),
-          inArray(taskAssignees.taskId, removedTaskIds)
-        ))
-    }
 
     try {
       const managers = await db.query.workspaceMembers.findMany({

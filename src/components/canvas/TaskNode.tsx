@@ -11,6 +11,15 @@ import { Spinner } from "@/components/ui/spinner"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import type { ProjectTask } from "@/db/queries/task"
 import { allowedTaskTransitions, type UpdateTaskSchemaType } from "@/db/validations"
+import {
+  formatDueDate,
+  getInitials,
+  getPendingBlockers,
+  priorityBadge,
+  statusBadge,
+  statusLabels,
+  statusLeftAccent,
+} from "@/lib/task-display"
 
 export type OptimisticApi = {
   toggleTaskStatus: (taskId: string, nextStatus: ProjectTask["status"]) => void
@@ -34,37 +43,6 @@ export type TaskNodeType = Node<TaskNodeData>
 
 type TaskAssignee = ProjectTask["assignees"][number]
 
-const statusLabels: Record<ProjectTask["status"], string> = {
-  todo: "Todo",
-  in_progress: "In Progress",
-  in_review: "In Review",
-  done: "Done",
-  blocked: "Blocked",
-}
-
-const statusLeftAccent: Record<ProjectTask["status"], string> = {
-  todo: "bg-muted-foreground/60",
-  in_progress: "bg-primary",
-  in_review: "bg-amber-500",
-  done: "bg-emerald-500",
-  blocked: "bg-destructive",
-}
-
-const statusBadge: Record<ProjectTask["status"], string> = {
-  todo: "bg-muted text-muted-foreground border-muted-foreground/20",
-  in_progress: "bg-primary/10 text-primary border-primary/20",
-  in_review: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  done: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-  blocked: "bg-destructive/10 text-destructive border-destructive/20",
-}
-
-const priorityBadge: Record<ProjectTask["priority"], string> = {
-  low: "bg-muted text-muted-foreground border-muted-foreground/20",
-  medium: "bg-primary/10 text-primary border-primary/20",
-  high: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  urgent: "bg-destructive/10 text-destructive border-destructive/20",
-}
-
 const emptyOptimisticApi: OptimisticApi = {
   toggleTaskStatus: () => {},
   updateTaskDetails: () => {},
@@ -74,9 +52,6 @@ const emptyOptimisticApi: OptimisticApi = {
   deleteSubtask: () => {},
   deleteTask: () => {},
 }
-
-const getInitials = (name: string) =>
-  name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
 
 function AssigneeAvatar({ assignee, currentUserId }: { assignee: TaskAssignee; currentUserId: string | null }) {
   const displayName = assignee.user.id === currentUserId ? "You" : assignee.user.name
@@ -144,7 +119,7 @@ export default function TaskNode({ data, selected }: NodeProps) {
   const [subtaskTitle, setSubtaskTitle] = useState("")
   const [isAddPending, startAddTransition] = useTransition()
 
-  const pendingBlockers = task.blockedBy.filter((d) => d.dependsOn.status !== "done")
+  const pendingBlockers = getPendingBlockers(task.blockedBy)
   const isBlocked = pendingBlockers.length > 0
   const isDone = task.status === "done"
   const isAssignee = task.assignees.some((a) => a.user.id === currentUserId)
@@ -166,9 +141,7 @@ export default function TaskNode({ data, selected }: NodeProps) {
   )
   const doneCount = sortedSubtasks.filter((s) => s.isDone).length
 
-  const dueDateLabel = task.dueDate
-    ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(task.dueDate))
-    : null
+  const dueDateLabel = task.dueDate ? formatDueDate(task.dueDate) : null
 
   // The quick button walks the same chain as the details dropdown, one step at a
   // time, so a skip like in_progress -> done can never be sent to the server.

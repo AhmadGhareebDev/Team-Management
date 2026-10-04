@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { workspaceMembers } from "@/db/schemas/workspaceMembers";
 import { project } from "@/db/schemas/project";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { workspace } from "@/db/schemas"
 
 
@@ -95,3 +95,25 @@ export async function getWorkspaceProjectsWithMembers(workspaceId: string) {
     })
 }
 export type WorkspaceProjectWithMembers = Awaited<ReturnType<typeof getWorkspaceProjectsWithMembers>>[number];
+export async function getWorkspaceMembersForWorkspaces(workspaceIds: string[]) {
+    if (workspaceIds.length === 0) {
+        return [];
+    }
+
+    return await db.query.workspaceMembers.findMany({
+        where: inArray(workspaceMembers.workspaceId, workspaceIds),
+        with: {
+            user: {
+                columns: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    avatar_url: true,
+                }
+            }
+        }
+    });
+}
+export type WorkspaceMembersBatch = Awaited<
+    ReturnType<typeof getWorkspaceMembersForWorkspaces>
+>[number];
