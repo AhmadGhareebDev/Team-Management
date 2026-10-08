@@ -20,6 +20,7 @@ import { insertTaskSchema,
     type TaskDependencySchemaType,
 } from "@/db/validations"
 import { createNotification, clearTaskDateNotifications } from "@/lib/notifications"
+import { recordActivity, getUserNames } from "@/lib/activity"
 
 const SPACING = 80
 
@@ -154,14 +155,25 @@ export async function createTask({
     })
 
     try {
+        const newTaskId = randomUUID()
         await db.insert(task).values({
-            id: randomUUID(),
+            id: newTaskId,
             projectId,
             createdBy: session.user.id,
             title: parsed.data.title,
             description: parsed.data.description,
             positionX: existing.length * SPACING,
             positionY: existing.length * SPACING,
+        })
+
+        await recordActivity({
+            workspaceId: access.workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "task_created",
+            entityType: "task",
+            entityId: newTaskId,
+            metadata: { title: parsed.data.title },
         })
 
         return { success: true }
@@ -202,7 +214,7 @@ export async function updateTask({
 
     const existing = await db.query.task.findFirst({
         where: and(eq(task.id, taskId), eq(task.projectId, projectId)),
-        columns: { id: true },
+        columns: { id: true, title: true },
     })
 
     if (!existing) {
@@ -225,6 +237,16 @@ export async function updateTask({
         if (dueDate !== undefined) {
             await clearTaskDateNotifications(taskId)
         }
+
+        await recordActivity({
+            workspaceId: access.workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "task_updated",
+            entityType: "task",
+            entityId: taskId,
+            metadata: { title: existing.title },
+        })
 
         return { success: true }
     } catch {
@@ -348,6 +370,20 @@ export async function updateTaskStatus({
             await recomputeDependents(taskId)
         }
 
+        await recordActivity({
+            workspaceId: access.workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "task_status_changed",
+            entityType: "task",
+            entityId: taskId,
+            metadata: {
+                title: existing.title,
+                from: existing.status,
+                to: parsed.data.status,
+            },
+        })
+
         return { success: true }
     } catch {
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -445,7 +481,7 @@ export async function deleteTask({
 
     const existing = await db.query.task.findFirst({
         where: and(eq(task.id, taskId), eq(task.projectId, projectId)),
-        columns: { id: true },
+        columns: { id: true, title: true },
     })
 
     if (!existing) {
@@ -503,6 +539,16 @@ export async function deleteTask({
             projectId,
             reason: null,
             dependentIds: unblockedDependentIds,
+        })
+
+        await recordActivity({
+            workspaceId: access.workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "task_deleted",
+            entityType: "task",
+            entityId: taskId,
+            metadata: { title: existing.title },
         })
 
         return { success: true }
@@ -618,6 +664,32 @@ export async function setTaskAssignees({
                     console.error("Error notifying removed assignee:", error)
                 }
             }
+
+            const names = await getUserNames([...added, ...removed])
+
+            for (const userId of added) {
+                await recordActivity({
+                    workspaceId: access.workspaceId,
+                    projectId,
+                    actorId: session.user.id,
+                    type: "task_assigned",
+                    entityType: "task",
+                    entityId: taskId,
+                    metadata: { title: existing.title, name: names.get(userId) },
+                })
+            }
+
+            for (const userId of removed) {
+                await recordActivity({
+                    workspaceId: access.workspaceId,
+                    projectId,
+                    actorId: session.user.id,
+                    type: "task_unassigned",
+                    entityType: "task",
+                    entityId: taskId,
+                    metadata: { title: existing.title, name: names.get(userId) },
+                })
+            }
         }
 
         return { success: true }
@@ -663,7 +735,7 @@ export async function addTaskDependency({
 
     const projectTaskIds = await db.query.task.findMany({
         where: eq(task.projectId, projectId),
-        columns: { id: true },
+        columns: { id: true, title: true },
     })
 
     const ids = projectTaskIds.map((t) => t.id)
@@ -734,6 +806,21 @@ export async function addTaskDependency({
 
         await syncTaskBlocked(taskId)
 
+        const taskTitles = new Map(projectTaskIds.map((t) => [t.id, t.title]))
+
+        await recordActivity({
+            workspaceId: access.workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "dependency_added",
+            entityType: "task",
+            entityId: taskId,
+            metadata: {
+                title: taskTitles.get(taskId),
+                name: taskTitles.get(dependsOnId),
+            },
+        })
+
         return { success: true }
     } catch {
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -777,7 +864,7 @@ export async function removeTaskDependency({
             eq(task.id, depRow.taskId),
             eq(task.projectId, projectId)
         ),
-        columns: { id: true },
+        columns: { id: true, title: true },
     })
 
     if (!taskBelongsToProject) {
@@ -800,12 +887,12 @@ export async function removeTaskDependency({
             columns: { status: true },
         })
 
-        if (statusBefore?.status === "blocked" && statusAfter?.status === "todo") {
-            const blocker = await db.query.task.findFirst({
-                where: eq(task.id, depRow.dependsOnId),
-                columns: { title: true },
-            })
+        const blocker = await db.query.task.findFirst({
+            where: eq(task.id, depRow.dependsOnId),
+            columns: { title: true },
+        })
 
+        if (statusBefore?.status === "blocked" && statusAfter?.status === "todo") {
             await notifyUnblockedDependents({
                 actorId: session.user.id,
                 workspaceId: access.workspaceId,
@@ -816,6 +903,19 @@ export async function removeTaskDependency({
                 dependentIds: [depRow.taskId],
             })
         }
+
+        await recordActivity({
+            workspaceId: access.workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "dependency_removed",
+            entityType: "task",
+            entityId: depRow.taskId,
+            metadata: {
+                title: taskBelongsToProject.title,
+                name: blocker?.title,
+            },
+        })
 
         return { success: true }
     } catch {

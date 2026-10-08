@@ -7,6 +7,7 @@ import { insertWorkspaceSchema, type InsertWorkspaceSchemaType } from "@/db/vali
 import { getTasksAssignedToUserInProjects } from "@/db/queries/task"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
+import { recordActivity, getUserNames } from "@/lib/activity"
 
 export async function createWorkspace(data: InsertWorkspaceSchemaType) {
 
@@ -277,6 +278,17 @@ export async function respondInvitation({ invitationId, action }: { invitationId
             isRead: true,
         }).where(eq(notification.workspaceInvitationId, invitationId))
 
+        if (action === "accepted") {
+            await recordActivity({
+                workspaceId: invitation.workspaceId,
+                actorId: session.user.id,
+                type: "member_added",
+                entityType: "workspace_member",
+                entityId: session.user.id,
+                metadata: { name: session.user.name ?? undefined },
+            })
+        }
+
         return { success: true }
 
     } catch (error) {
@@ -367,6 +379,17 @@ export async function makeMemberAdmin(workspaceId: string, memberId: string): Pr
         eq(workspaceMembers.userId, memberId)
       ))
 
+    const names = await getUserNames([memberId])
+
+    await recordActivity({
+      workspaceId,
+      actorId: actor.data.actorId,
+      type: "member_role_changed",
+      entityType: "workspace_member",
+      entityId: memberId,
+      metadata: { name: names.get(memberId), from: target.data, to: "admin" },
+    })
+
     return { success: true }
   } catch (error) {
     return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -399,6 +422,17 @@ export async function makeMemberRegular(workspaceId: string, memberId: string): 
         eq(workspaceMembers.workspaceId, workspaceId),
         eq(workspaceMembers.userId, memberId)
       ))
+
+    const names = await getUserNames([memberId])
+
+    await recordActivity({
+      workspaceId,
+      actorId: actor.data.actorId,
+      type: "member_role_changed",
+      entityType: "workspace_member",
+      entityId: memberId,
+      metadata: { name: names.get(memberId), from: target.data, to: "member" },
+    })
 
     return { success: true }
   } catch (error) {
@@ -440,6 +474,17 @@ export async function makeMemberOwner(workspaceId: string, memberId: string): Pr
           eq(workspaceMembers.userId, actor.data.actorId)
         )),
     ])
+
+    const names = await getUserNames([memberId])
+
+    await recordActivity({
+      workspaceId,
+      actorId: actor.data.actorId,
+      type: "member_role_changed",
+      entityType: "workspace_member",
+      entityId: memberId,
+      metadata: { name: names.get(memberId), from: target.data, to: "owner" },
+    })
 
     return { success: true }
   } catch (error) {
@@ -554,6 +599,17 @@ export async function removeWorkspaceMember(workspaceId: string, memberId: strin
     } catch (error) {
       console.error("Error notifying managers:", error)
     }
+
+    const names = await getUserNames([memberId])
+
+    await recordActivity({
+      workspaceId,
+      actorId: actor.data.actorId,
+      type: "member_removed",
+      entityType: "workspace_member",
+      entityId: memberId,
+      metadata: { name: names.get(memberId), from: target.data },
+    })
 
     return { success: true }
   } catch (error) {

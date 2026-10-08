@@ -7,6 +7,7 @@ import {
   getWorkspaceMembersForWorkspaces,
 } from "@/db/queries/workspaces"
 import { getUserProjects } from "@/db/queries/project"
+import { getProjectStats, getProgressPct, getProjectHealth } from "@/db/queries/stats"
 import { Button } from "@/components/ui/button"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
 import ProjectCard from "../../workspaces/_components/ProjectCard"
@@ -49,6 +50,8 @@ export default async function MyProjectsList() {
 
   const workspaceIds = [...new Set(projects.map((p) => p.workspaceId))]
   const memberRows = await getWorkspaceMembersForWorkspaces(workspaceIds)
+  const statsRows = await getProjectStats(projects.map((p) => p.id))
+  const statsById = new Map(statsRows.map((row) => [row.projectId, row]))
 
   const roleByWorkspace = new Map<string, WorkspaceRole | null>(
     memberships.map((m) => [m.workspace.id, m.role])
@@ -87,15 +90,21 @@ export default async function MyProjectsList() {
           </h2>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {grouped.get(workspaceId)!.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                workspaceId={workspaceId}
-                role={roleByWorkspace.get(workspaceId) ?? null}
-                members={membersByWorkspace.get(workspaceId) ?? []}
-              />
-            ))}
+            {grouped.get(workspaceId)!.map((project) => {
+              const projectStats = statsById.get(project.id)
+
+              return (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  workspaceId={workspaceId}
+                  role={roleByWorkspace.get(workspaceId) ?? null}
+                  members={membersByWorkspace.get(workspaceId) ?? []}
+                  progress={projectStats ? getProgressPct(projectStats) : 0}
+                  health={projectStats ? getProjectHealth(projectStats) : "healthy"}
+                />
+              )
+            })}
           </div>
         </section>
       ))}

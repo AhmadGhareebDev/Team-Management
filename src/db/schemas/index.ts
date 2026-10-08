@@ -10,3 +10,4 @@ export { taskAssignees, taskAssigneesRelations } from "@/db/schemas/taskAssignee
 export { taskDependencies, taskDependenciesRelations } from "@/db/schemas/taskDependencies"
 export { subtask, subtaskRelations } from "@/db/schemas/subtasks"
 export { notification, notificationTypeEnum, notificationRelations } from "@/db/schemas/notification"
+export { activity, activityTypeEnum, activityRelations, type ActivityMetadata } from "@/db/schemas/activity"

@@ -19,6 +19,7 @@ import { markNotificationAsRead } from "@/actions/notifications"
 import type { Notification } from "@/db/queries/notifications"
 import { cn } from "@/lib/utils"
 import { resolveActionError } from "@/lib/error-messages"
+import { formatRelativeTime } from "@/lib/relative-time"
 
 const taskTypes = [
   "task_assigned",
@@ -38,17 +39,6 @@ const taskIcons: Record<(typeof taskTypes)[number], typeof CheckCircle2> = {
   deadline_approaching: Clock,
   dependency_overdue: Clock,
   dependency_resolved: CheckCircle2,
-}
-
-function formatRelativeTime(date: Date) {
-  const seconds = Math.round((Date.now() - date.getTime()) / 1000)
-  if (seconds < 60) return "just now"
-  const minutes = Math.round(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.round(hours / 24)
-  return `${days}d ago`
 }
 
 function initials(name: string) {

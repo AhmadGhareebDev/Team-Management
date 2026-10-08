@@ -29,6 +29,8 @@ import { deleteProject, editProjectInfo } from "@/actions/project"
 import { insertProjectSchema, type InsertProjectSchemaType } from "@/db/validations"
 import { cn } from "@/lib/utils"
 import { resolveActionError } from "@/lib/error-messages"
+import { ProjectHealthBadge, ProjectProgressBar } from "@/components/web/ProjectStats"
+import type { ProjectHealth } from "@/db/queries/stats"
 
 const MAX_AVATARS = 4
 
@@ -37,11 +39,15 @@ export default function ProjectCard({
   workspaceId,
   role,
   members,
+  progress,
+  health,
 }: {
   project: WorkspaceProjectWithMembers
   workspaceId: string
   role: WorkspaceRole | null
   members: WorkspaceMemberWithUser[]
+  progress?: number
+  health?: ProjectHealth
 }) {
   const router = useRouter()
   const { require } = useAuthGate()
@@ -206,6 +212,16 @@ export default function ProjectCard({
           <p className="text-sm italic text-muted-foreground/60">
             No description provided.
           </p>
+        )}
+
+        {(progress !== undefined || health !== undefined) && (
+          <div className="flex items-center gap-3">
+            <ProjectProgressBar value={progress ?? 0} className="flex-1" />
+            <span className="shrink-0 text-xs font-mono text-muted-foreground">
+              {progress ?? 0}%
+            </span>
+            {health !== undefined && <ProjectHealthBadge health={health} />}
+          </div>
         )}
 
         {/* Footer: Member stats + Avatars */}

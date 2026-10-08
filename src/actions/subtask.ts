@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { getUserProjectAccess } from "@/db/queries/project"
 import { insertSubtaskSchema, type InsertSubtaskSchemaType } from "@/db/validations"
+import { recordActivity } from "@/lib/activity"
 
 async function canManageSubtasks(
     access: NonNullable<Awaited<ReturnType<typeof getUserProjectAccess>>>,
@@ -82,6 +83,16 @@ export async function addSubtask({
             title: parsed.data.title,
         })
 
+        await recordActivity({
+            workspaceId: access.workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "subtask_added",
+            entityType: "subtask",
+            entityId: id,
+            metadata: { title: parsed.data.title },
+        })
+
         return { success: true, subtaskId: id }
     } catch {
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -128,7 +139,7 @@ export async function toggleSubtask({
             eq(subtask.id, subtaskId),
             eq(subtask.taskId, taskId)
         ),
-        columns: { id: true, isDone: true, createdBy: true },
+        columns: { id: true, isDone: true, createdBy: true, title: true },
     })
 
     if (!subtaskRow) {
@@ -141,10 +152,23 @@ export async function toggleSubtask({
     }
 
     try {
+        const nowDone = !subtaskRow.isDone
         await db
             .update(subtask)
-            .set({ isDone: !subtaskRow.isDone })
+            .set({ isDone: nowDone })
             .where(eq(subtask.id, subtaskId))
+
+        if (nowDone) {
+            await recordActivity({
+                workspaceId: access.workspaceId,
+                projectId,
+                actorId: session.user.id,
+                type: "subtask_completed",
+                entityType: "subtask",
+                entityId: subtaskId,
+                metadata: { title: subtaskRow.title },
+            })
+        }
 
         return { success: true }
     } catch {
@@ -192,7 +216,7 @@ export async function deleteSubtask({
             eq(subtask.id, subtaskId),
             eq(subtask.taskId, taskId)
         ),
-        columns: { id: true },
+        columns: { id: true, title: true },
     })
 
     if (!subtaskRow) {
@@ -208,6 +232,16 @@ export async function deleteSubtask({
         await db
             .delete(subtask)
             .where(eq(subtask.id, subtaskId))
+
+        await recordActivity({
+            workspaceId: access.workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "subtask_deleted",
+            entityType: "subtask",
+            entityId: subtaskId,
+            metadata: { title: subtaskRow.title },
+        })
 
         return { success: true }
     } catch {

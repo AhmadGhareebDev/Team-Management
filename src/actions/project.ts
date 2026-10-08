@@ -7,6 +7,7 @@ import { insertProjectSchema, type InsertProjectSchemaType } from "@/db/validati
 import { getTasksAssignedToUserInProject } from "@/db/queries/task"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
+import { recordActivity, getUserNames } from "@/lib/activity"
 
 export async function createProject(workspaceId: string, data: InsertProjectSchemaType) {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -53,6 +54,16 @@ export async function createProject(workspaceId: string, data: InsertProjectSche
                 userId: session.user.id,
             }),
         ])
+
+        await recordActivity({
+            workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "project_created",
+            entityType: "project",
+            entityId: projectId,
+            metadata: { title: parsedData.data.name },
+        })
 
         return { success: true, projectId }
     } catch (error) {
@@ -148,6 +159,21 @@ export async function addProjectMember({
             console.error("Error notifying added project member:", error)
         }
 
+        const names = await getUserNames([userId])
+
+        await recordActivity({
+            workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "member_added",
+            entityType: "project_member",
+            entityId: userId,
+            metadata: {
+                name: names.get(userId),
+                title: projectBelongsToWorkspace.name,
+            },
+        })
+
         return { success: true }
     } catch {
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -192,6 +218,16 @@ export async function deleteProject({workspaceId, projectId}: {workspaceId: stri
         }
 
             await db.delete(project).where(eq(project.id, projectId));
+
+            await recordActivity({
+                workspaceId,
+                projectId: null,
+                actorId: session.user.id,
+                type: "project_deleted",
+                entityType: "project",
+                entityId: projectId,
+                metadata: { title: projectBelongToWorkspace.name },
+            })
 
             return { success: true }
 
@@ -250,6 +286,16 @@ export async function editProjectInfo({workspaceId, projectId, data}: {workspace
                     description: parsedData.data.description,
                 })
                 .where(eq(project.id, projectId));
+
+        await recordActivity({
+            workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "project_updated",
+            entityType: "project",
+            entityId: projectId,
+            metadata: { title: parsedData.data.name },
+        })
 
         return { success: true }
 
@@ -333,21 +379,22 @@ export async function removeProjectMember({ workspaceId, projectId, userId }: { 
         // Tell the person who was removed, plus everyone left in the project.
         // The actor already knows, so skip them. A notification failure must
         // never turn a completed removal into an error.
-        try {
-            const [projectRow, removedMemberRow] = await Promise.all([
-                db.query.project.findFirst({
-                    where: eq(project.id, projectId),
-                    columns: { name: true },
-                }),
-                db.query.user.findFirst({
-                    where: eq(user.id, userId),
-                    columns: { name: true },
-                }),
-            ])
+        const [projectRow, removedMemberRow] = await Promise.all([
+            db.query.project.findFirst({
+                where: eq(project.id, projectId),
+                columns: { name: true },
+            }),
+            db.query.user.findFirst({
+                where: eq(user.id, userId),
+                columns: { name: true },
+            }),
+        ])
 
+        const removedName = removedMemberRow?.name ?? "A member"
+        const projectName = projectRow?.name ?? "the project"
+
+        try {
             const actorName = session.user.name ?? "An admin"
-            const removedName = removedMemberRow?.name ?? "A member"
-            const projectName = projectRow?.name ?? "the project"
             const taskList = removedTitles.length > 0
                 ? ` Tasks now unassigned: ${removedTitles.map((t) => `"${t}"`).join(", ")}.`
                 : ""
@@ -390,6 +437,16 @@ export async function removeProjectMember({ workspaceId, projectId, userId }: { 
         } catch (error) {
             console.error("Error notifying removed project member:", error)
         }
+
+        await recordActivity({
+            workspaceId,
+            projectId,
+            actorId: session.user.id,
+            type: "member_removed",
+            entityType: "project_member",
+            entityId: userId,
+            metadata: { name: removedName, title: projectName },
+        })
 
         return { success: true }
 

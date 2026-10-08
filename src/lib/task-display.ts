@@ -50,6 +50,14 @@ export function formatDueDate(dueDate: Date | string) {
   )
 }
 
+export function isOverdue(
+  dueDate: Date | string | null | undefined,
+  status: TaskStatus
+) {
+  if (!dueDate || status === "done") return false
+  return new Date(dueDate) < new Date()
+}
+
 export function getPendingBlockers<T extends { dependsOn: { status: TaskStatus } }>(
   blockedBy: readonly T[]
 ) {

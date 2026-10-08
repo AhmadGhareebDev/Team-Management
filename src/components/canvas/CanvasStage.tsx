@@ -20,7 +20,7 @@ import {
   type OnNodesDelete,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
-import { ArrowLeft, ChevronDown, ChevronUp, Plus } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronUp, LayoutDashboard, Plus } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import { Input } from "@/components/ui/input"
@@ -604,6 +604,23 @@ export default function CanvasStage({
             >
               <ArrowLeft className="size-4" />
             </Link>
+
+            {isManager && (
+              <Link
+                href={`/workspaces/${workspaceId}/project/${project.id}/dashboard`}
+                className={buttonVariants({
+                  variant: "ghost",
+                  size: "xs",
+                  className:
+                    "rounded-full px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground",
+                })}
+                aria-label="Project dashboard"
+                title="Project dashboard"
+              >
+                <LayoutDashboard className="size-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+            )}
 
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-xs font-semibold text-foreground tracking-tight">{project.name}</h1>
