@@ -4,7 +4,7 @@ import Link from "next/link"
 import {
   Card,
 } from "@/components/ui/card"
-import { getWorkspaceById, getUserWorkspaceRole } from "@/db/queries/workspaces"
+import { getUserWorkspaceRole, getWorkspaceById } from "@/db/queries/workspaces"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 
@@ -15,11 +15,18 @@ import WorkspaceMembersList from "../_components/WorkspaceMembersList"
 
 export const instant = false;
 
-export default async function WorkspaceDetailsPage({params} : { params: Promise<{workspaceId: string}> }) {
-  const { workspaceId } = await params;
+export default async function WorkspaceDetailsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspaceId: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const { workspaceId } = await params
   const session = await auth.api.getSession({ headers: await headers() });
   const role = session ? await getUserWorkspaceRole(workspaceId, session.user.id) : null;
   const workspace = await getWorkspaceById(workspaceId);
+  const resolvedSearchParams = await searchParams;
 
   if (!workspace) {
     return (
@@ -58,9 +65,11 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
             <CreateProject workspaceId={workspaceId} role={role}/>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ProjectList workspaceId={workspaceId} role={role} />
-          </div>
+          <ProjectList
+            workspaceId={workspaceId}
+            role={role}
+            searchParams={resolvedSearchParams}
+          />
         </div>
 
         <div className="space-y-4 self-start md:col-span-4 md:sticky md:top-6">
@@ -69,11 +78,11 @@ export default async function WorkspaceDetailsPage({params} : { params: Promise<
             <InviteUser workspaceId={workspaceId} role={role} />
           </div>
 
-          <Card className="overflow-hidden">
-            <div className="divide-y divide-border">
-              <WorkspaceMembersList workspaceId={workspaceId} role={role} />
-            </div>
-          </Card>
+          <WorkspaceMembersList
+            workspaceId={workspaceId}
+            role={role}
+            searchParams={resolvedSearchParams}
+          />
         </div>
       </div>
     </div>

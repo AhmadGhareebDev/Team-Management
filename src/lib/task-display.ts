@@ -58,6 +58,19 @@ export function isOverdue(
   return new Date(dueDate) < new Date()
 }
 
+export const DUE_SOON_WINDOW_MS = 48 * 60 * 60 * 1000
+
+export function isDueSoon(
+  dueDate: Date | string | null | undefined,
+  status: TaskStatus,
+  windowMs: number = DUE_SOON_WINDOW_MS
+) {
+  if (!dueDate || status === "done") return false
+  const time = new Date(dueDate).getTime()
+  const now = Date.now()
+  return time > now && time <= now + windowMs
+}
+
 export function getPendingBlockers<T extends { dependsOn: { status: TaskStatus } }>(
   blockedBy: readonly T[]
 ) {

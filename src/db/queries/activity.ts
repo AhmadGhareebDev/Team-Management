@@ -1,10 +1,24 @@
 import { db } from "@/db";
 import { activity, workspaceMembers } from "@/db/schemas";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 
-export async function getRecentActivityForUser(userId: string, limit = 20) {
+export type ActivityFilters = {
+    workspaceId?: string;
+};
+
+export async function getRecentActivityForUser(
+    userId: string,
+    options: {
+        limit?: number;
+        offset?: number;
+        filters?: ActivityFilters;
+    } = {}
+) {
+    const limit = options.limit ?? 15;
+    const offset = options.offset ?? 0;
+
     if (!userId) {
-        return [];
+        return { items: [], total: 0 };
     }
 
     const memberships = await db.query.workspaceMembers.findMany({
@@ -14,19 +28,38 @@ export async function getRecentActivityForUser(userId: string, limit = 20) {
 
     const workspaceIds = [...new Set(memberships.map((m) => m.workspaceId))];
     if (workspaceIds.length === 0) {
-        return [];
+        return { items: [], total: 0 };
     }
 
-    return await db.query.activity.findMany({
-        where: inArray(activity.workspaceId, workspaceIds),
-        orderBy: desc(activity.createdAt),
-        limit,
-        with: {
-            actor: { columns: { id: true, name: true, avatar_url: true } },
-            project: { columns: { id: true, name: true } },
-            workspace: { columns: { id: true, name: true } },
-        },
-    });
+    const scoped =
+        options.filters?.workspaceId &&
+        workspaceIds.includes(options.filters.workspaceId)
+            ? [options.filters.workspaceId]
+            : workspaceIds;
+
+    const where = inArray(activity.workspaceId, scoped);
+
+    const [items, countRows] = await Promise.all([
+        db.query.activity.findMany({
+            where,
+            orderBy: [desc(activity.createdAt)],
+            limit,
+            offset,
+            with: {
+                actor: { columns: { id: true, name: true, avatar_url: true } },
+                project: { columns: { id: true, name: true } },
+                workspace: { columns: { id: true, name: true } },
+            },
+        }),
+        db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(activity)
+            .where(where),
+    ]);
+
+    return { items, total: countRows[0]?.count ?? 0 };
 }
 
-export type RecentActivity = Awaited<ReturnType<typeof getRecentActivityForUser>>[number];
+export type RecentActivity = Awaited<
+    ReturnType<typeof getRecentActivityForUser>
+>["items"][number];

@@ -20,7 +20,7 @@ import {
   statusLabels,
   statusLeftAccent,
 } from "@/lib/task-display"
-import type { ProjectTask } from "@/db/queries/task"
+import type { ProjectDashboardTask } from "@/db/queries/task"
 import type { TaskStatus } from "@/db/validations"
 import {
   getProgressPct,
@@ -48,7 +48,7 @@ function StatTile({
   accent?: boolean
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-4">
+    <div className="rounded-xl border-0 bg-card p-4 shadow-sm ring-1 ring-foreground/5">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p
         className={cn(
@@ -69,7 +69,7 @@ function DashboardTaskRow({
 }: {
   workspaceId: string
   projectId: string
-  task: ProjectTask
+  task: ProjectDashboardTask
 }) {
   const pendingBlockers = getPendingBlockers(task.blockedBy)
   const isBlocked = task.status === "blocked" || pendingBlockers.length > 0
@@ -81,7 +81,7 @@ function DashboardTaskRow({
   return (
     <Link
       href={`/workspaces/${workspaceId}/project/${projectId}?task=${task.id}`}
-      className="group flex flex-col gap-2 rounded-lg border border-border/60 bg-card p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="group flex flex-col gap-2 rounded-lg border-0 bg-card p-3 shadow-sm ring-1 ring-foreground/5 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 text-sm font-medium leading-snug text-foreground">
@@ -145,16 +145,20 @@ function DashboardTaskRow({
 function StatusColumn({
   status,
   tasks,
+  totalCount,
   workspaceId,
   projectId,
 }: {
   status: TaskStatus
-  tasks: ProjectTask[]
+  tasks: ProjectDashboardTask[]
+  totalCount: number
   workspaceId: string
   projectId: string
 }) {
+  const hidden = Math.max(0, totalCount - tasks.length)
+
   return (
-    <div className="flex min-h-40 flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 p-3">
+    <div className="flex min-h-40 flex-col gap-3 rounded-xl border-0 bg-muted/20 p-3 ring-1 ring-foreground/5">
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2">
           <span className={cn("size-2 shrink-0 rounded-full", statusLeftAccent[status])} />
@@ -163,16 +167,16 @@ function StatusColumn({
           </h3>
         </span>
         <Badge className="shrink-0 border-border/60 bg-background text-muted-foreground">
-          {tasks.length}
+          {totalCount}
         </Badge>
       </div>
 
       {tasks.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-center text-[11px] text-muted-foreground">
+        <p className="rounded-lg border-0 bg-muted/40 px-3 py-4 text-center text-[11px] text-muted-foreground">
           No tasks
         </p>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex max-h-80 flex-col gap-2 overflow-y-auto scrollbar-thin pr-0.5">
           {tasks.map((task) => (
             <DashboardTaskRow
               key={task.id}
@@ -182,6 +186,15 @@ function StatusColumn({
             />
           ))}
         </div>
+      )}
+
+      {hidden > 0 && (
+        <Link
+          href={`/workspaces/${workspaceId}/project/${projectId}`}
+          className="text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          +{hidden} more on the canvas
+        </Link>
       )}
     </div>
   )
@@ -195,15 +208,23 @@ export default function ProjectDashboard({
 }: {
   workspaceId: string
   project: { id: string; name: string; description: string | null }
-  tasks: ProjectTask[]
+  tasks: ProjectDashboardTask[]
   stats: ProjectStats
 }) {
   const progress = getProgressPct(stats)
   const health = getProjectHealth(stats)
 
-  const tasksByStatus = new Map<TaskStatus, ProjectTask[]>(
+  const tasksByStatus = new Map<TaskStatus, ProjectDashboardTask[]>(
     STATUS_ORDER.map((status) => [status, []])
   )
+
+  const countByStatus = new Map<TaskStatus, number>([
+    ["todo", stats.todo],
+    ["in_progress", stats.inProgress],
+    ["in_review", stats.inReview],
+    ["blocked", stats.blocked],
+    ["done", stats.done],
+  ])
   for (const task of tasks) {
     tasksByStatus.get(task.status)?.push(task)
   }
@@ -239,7 +260,7 @@ export default function ProjectDashboard({
       </div>
 
       <section className="grid gap-4 md:grid-cols-12">
-        <Card className="md:col-span-5">
+        <Card className="border-0 bg-card md:col-span-5">
           <CardContent className="flex flex-col gap-4 p-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-foreground">
@@ -277,6 +298,7 @@ export default function ProjectDashboard({
             key={status}
             status={status}
             tasks={tasksByStatus.get(status) ?? []}
+            totalCount={countByStatus.get(status) ?? 0}
             workspaceId={workspaceId}
             projectId={project.id}
           />

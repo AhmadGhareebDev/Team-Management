@@ -4,11 +4,13 @@ import { buttonVariants } from "@/components/ui/button"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { getProjectById, getUserProjectAccess } from "@/db/queries/project"
-import { getProjectTasks } from "@/db/queries/task"
+import { getProjectDashboardTasks } from "@/db/queries/task"
 import { getProjectStats } from "@/db/queries/stats"
 import ProjectDashboard from "./_components/ProjectDashboard"
 
 export const instant = false
+
+export const DASHBOARD_TASKS_PER_STATUS = 8
 
 export default async function ProjectDashboardPage({
     params,
@@ -78,7 +80,7 @@ export default async function ProjectDashboardPage({
     }
 
     const [tasks, statsRows] = await Promise.all([
-        getProjectTasks(projectId),
+        getProjectDashboardTasks(projectId, DASHBOARD_TASKS_PER_STATUS),
         getProjectStats([projectId]),
     ])
 

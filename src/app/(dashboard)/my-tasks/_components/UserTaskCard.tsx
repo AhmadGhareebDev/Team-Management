@@ -9,6 +9,7 @@ import {
   formatDueDate,
   getInitials,
   getPendingBlockers,
+  isDueSoon,
   priorityBadge,
   statusBadge,
   statusLabels,
@@ -25,6 +26,7 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
   const isDone = task.status === "done"
 
   const overdue = task.dueDate && new Date(task.dueDate) < new Date() && !isDone
+  const dueSoon = !overdue && isDueSoon(task.dueDate, task.status)
 
   const doneSubtasks = task.subtasks.filter((s) => s.isDone).length
   const hasSubtasks = task.subtasks.length > 0
@@ -68,6 +70,11 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
             <Badge className={priorityBadge[task.priority]}>
               {task.priority}
             </Badge>
+            {dueSoon && (
+              <Badge className="border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                Due soon
+              </Badge>
+            )}
           </div>
 
           <p className="line-clamp-2 text-sm font-semibold leading-snug text-card-foreground">
@@ -97,7 +104,11 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
             <div
               className={cn(
                 "flex items-center gap-1.5 text-[11px] font-medium",
-                overdue ? "text-destructive" : "text-muted-foreground"
+                overdue
+                  ? "text-destructive"
+                  : dueSoon
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-muted-foreground"
               )}
             >
               <Calendar className="size-3 shrink-0" />

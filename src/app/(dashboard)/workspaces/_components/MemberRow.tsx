@@ -1,7 +1,8 @@
 "use client"
 import { useState, useTransition } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Crown, EllipsisVertical, ShieldCheck, Trash2, UserMinus } from "lucide-react"
+import { ChevronDown, Crown, EllipsisVertical, ShieldCheck, Trash2, UserMinus } from "lucide-react"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,10 +22,14 @@ import {
   removeWorkspaceMember,
 } from "@/actions/workspace"
 import { authClient } from "@/lib/auth-client"
-import { WorkspaceMemberWithUser } from "@/db/queries/workspaces"
+import {
+  WorkspaceMemberWithUser,
+  MemberAssignments,
+} from "@/db/queries/workspaces"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
 import { cn } from "@/lib/utils"
 import { resolveActionError } from "@/lib/error-messages"
+import { formatDueDate, isOverdue, statusLeftAccent } from "@/lib/task-display"
 
 type MemberAction = "admin" | "member" | "owner"
 
@@ -32,10 +37,12 @@ export default function MemberRow({
   member,
   role,
   workspaceId,
+  assignments,
 }: {
   member: WorkspaceMemberWithUser
   role: WorkspaceRole | null
   workspaceId: string
+  assignments?: MemberAssignments
 }) {
   const router = useRouter()
   const { data: session } = authClient.useSession()
@@ -114,7 +121,7 @@ export default function MemberRow({
   const displayName = isSelf ? "You" : member.user.name
 
   return (
-    <div key={member.user.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40">
+    <div key={member.user.id} className="flex flex-wrap items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40">
       <ImageKitAvatar
         src={member.user.avatar_url}
         alt={displayName}
@@ -191,6 +198,12 @@ export default function MemberRow({
           isManager && <div aria-hidden className="size-7" />
         )}
       </div>
+      {assignments !== undefined && (
+        <MemberAssignmentsPanel
+          workspaceId={workspaceId}
+          assignments={assignments}
+        />
+      )}
       <Modal
         open={removeOpen}
         onOpenChange={setRemoveOpen}
@@ -221,5 +234,100 @@ function RoleBadge({ role }: { role: "owner" | "admin" | "member" }) {
     >
       {role.charAt(0).toUpperCase() + role.slice(1)}
     </span>
+  )
+}
+
+function MemberAssignmentsPanel({
+  workspaceId,
+  assignments,
+}: {
+  workspaceId: string
+  assignments: MemberAssignments
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const items = assignments.items
+  const overdueCount = items.filter((a) =>
+    isOverdue(a.dueDate, a.status)
+  ).length
+
+  if (assignments.total === 0) {
+    return (
+      <p className="w-full pl-11 text-xs text-muted-foreground">
+        No active tasks
+      </p>
+    )
+  }
+
+  return (
+    <div className="w-full pl-11">
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronDown
+          className={cn(
+            "size-3.5 transition-transform",
+            expanded && "rotate-180"
+          )}
+        />
+        <span>
+          {assignments.total} active{" "}
+          {assignments.total === 1 ? "task" : "tasks"}
+        </span>
+        {overdueCount > 0 && (
+          <span className="font-medium text-destructive">
+            · {overdueCount} overdue
+          </span>
+        )}
+      </button>
+
+      {expanded && (
+        <ul className="mt-1.5 space-y-0.5">
+          {items.map((a) => (
+            <li key={a.id}>
+              <Link
+                href={`/workspaces/${workspaceId}/project/${a.projectId}?task=${a.id}`}
+                className="flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/60"
+              >
+                <span
+                  className={cn(
+                    "mt-1.5 size-1.5 shrink-0 rounded-full",
+                    statusLeftAccent[a.status]
+                  )}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-medium text-foreground">
+                    {a.title}
+                  </span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {a.projectName}
+                  </span>
+                </span>
+                {a.dueDate && (
+                  <span
+                    className={cn(
+                      "shrink-0 text-[11px] font-medium",
+                      isOverdue(a.dueDate, a.status)
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {formatDueDate(a.dueDate)}
+                  </span>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {assignments.total > items.length && (
+        <p className="mt-1.5 pl-2 text-[11px] text-muted-foreground/80">
+          Showing {items.length} of {assignments.total} active tasks
+        </p>
+      )}
+    </div>
   )
 }

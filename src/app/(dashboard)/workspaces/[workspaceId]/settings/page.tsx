@@ -21,10 +21,13 @@ export const instant = false
 
 export default async function WorkspaceSettingsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workspaceId: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { workspaceId } = await params
+  const resolvedSearchParams = await searchParams
 
   const workspace = await getWorkspaceById(workspaceId)
   if (!workspace) {
@@ -104,8 +107,14 @@ export default async function WorkspaceSettingsPage({
                 Everyone with access to this workspace.
               </CardDescription>
             </CardHeader>
-            <CardContent className="divide-y divide-border p-0">
-              <WorkspaceMembersList workspaceId={workspaceId} role={role} />
+            <CardContent className="p-0">
+              <div className="p-4">
+                <WorkspaceMembersList
+                  workspaceId={workspaceId}
+                  role={role}
+                  searchParams={resolvedSearchParams}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useTransition } from "react"
-import { Bell, CheckCheck, Clock } from "lucide-react"
+import { Bell, CheckCheck, Clock, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -15,10 +15,16 @@ import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import NotificationRow from "@/components/web/NotificationRow"
 import { markAllNotificationsAsRead } from "@/actions/notifications"
-import type { Notification } from "@/db/queries/notifications"
+import {
+  loadNotifications,
+  loadNotificationTabCounts,
+} from "@/actions/notifications-loader"
+import type {
+  Notification,
+  NotificationTab,
+} from "@/db/queries/notifications"
 import { resolveActionError } from "@/lib/error-messages"
-
-type NotificationTab = "invitations" | "tasks" | "members"
+import { PAGE_SIZES } from "@/lib/pagination"
 
 const tabLabels: Record<NotificationTab, string> = {
   invitations: "Invitations",
@@ -26,53 +32,102 @@ const tabLabels: Record<NotificationTab, string> = {
   members: "Members",
 }
 
-const taskTypes = [
-  "task_assigned",
-  "task_unblocked",
-  "dependency_overdue",
-  "dependency_resolved",
-  "deadline_approaching",
-  "task_reassigned",
-  "task_overdue",
-] as const
-
-function matchesTab(
-  notification: Notification,
-  tab: NotificationTab
-): boolean {
-  if (tab === "invitations") return notification.type === "workspace_invitation"
-  if (tab === "members") {
-    return (
-      notification.type === "member_removed" ||
-      notification.type === "project_member_added"
-    )
-  }
-  return (taskTypes as readonly string[]).includes(notification.type)
-}
+const tabOrder: NotificationTab[] = ["invitations", "tasks", "members"]
 
 export function NotificationsDropdown({
   notifications,
+  total,
+  counts,
+  unreadTotal,
 }: {
   notifications: Notification[]
+  total: number
+  counts: Record<NotificationTab, number>
+  unreadTotal: number
 }) {
   const router = useRouter()
+  const [items, setItems] = React.useState(notifications)
+  const [itemTotal, setItemTotal] = React.useState(total)
   const [activeTab, setActiveTab] = React.useState<NotificationTab>("invitations")
+  const [tabCounts, setTabCounts] = React.useState(counts)
+  const [unreadCount, setUnreadCount] = React.useState(unreadTotal)
   const [readIds, setReadIds] = React.useState<Set<string>>(() => new Set())
   const [isMarkingAll, startMarkAllTransition] = useTransition()
+  const [isSwitchingTab, startTabTransition] = useTransition()
+  const [isLoadingMore, startLoadMoreTransition] = useTransition()
 
   // Notifications are never removed from the list. Marking as read only
   // clears the unread dot, so track it locally until the server catches up.
   const isLocallyRead = (n: Notification) => n.isRead || readIds.has(n.id)
 
-  const unreadCount = React.useMemo(
-    () => notifications.filter((n) => !n.isRead && !readIds.has(n.id)).length,
-    [notifications, readIds]
-  )
-
-  const visible = notifications.filter((n) => matchesTab(n, activeTab))
+  const hasMore = items.length < itemTotal
 
   const handleRead = (id: string) => {
-    setReadIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)))
+    setReadIds((prev) => {
+      if (prev.has(id)) return prev
+      setUnreadCount((count) => Math.max(0, count - 1))
+      return new Set(prev).add(id)
+    })
+  }
+
+  const handleTabChange = (tab: NotificationTab) => {
+    if (tab === activeTab) return
+
+    setActiveTab(tab)
+
+    startTabTransition(async () => {
+      const [result, countResult] = await Promise.all([
+        loadNotifications({
+          tab,
+          offset: 0,
+          limit: PAGE_SIZES.notificationsDropdown,
+        }),
+        loadNotificationTabCounts(),
+      ])
+
+      if ("error" in result && result.error) {
+        toast.add({
+          type: "error",
+          description: "We couldn't load those notifications. Please try again.",
+        })
+        return
+      }
+
+      setItems(result.items)
+      setItemTotal(result.total)
+
+      if (!("error" in countResult) && "unread" in countResult) {
+        setTabCounts(countResult.total)
+        setUnreadCount(
+          Object.values(countResult.unread).reduce((sum, n) => sum + n, 0)
+        )
+      }
+    })
+  }
+
+  const handleLoadMore = () => {
+    startLoadMoreTransition(async () => {
+      const result = await loadNotifications({
+        tab: activeTab,
+        offset: items.length,
+        limit: PAGE_SIZES.notificationsDropdown,
+      })
+
+      if ("error" in result && result.error) {
+        toast.add({
+          type: "error",
+          description: "We couldn't load more notifications. Please try again.",
+        })
+        return
+      }
+
+      setItems((prev) => {
+        const seen = new Set(prev.map((item) => item.id))
+        const next = result.items.filter((item) => !seen.has(item.id))
+        return [...prev, ...next]
+      })
+      setItemTotal(result.total)
+    })
   }
 
   const handleMarkAll = () => {
@@ -90,7 +145,8 @@ export function NotificationsDropdown({
         return
       }
 
-      setReadIds(new Set(notifications.map((n) => n.id)))
+      setReadIds(new Set(items.map((n) => n.id)))
+      setUnreadCount(0)
       router.refresh()
       toast.add({
         type: "success",
@@ -100,11 +156,7 @@ export function NotificationsDropdown({
   }
 
   return (
-    <DropdownMenu
-      onOpenChange={(open) => {
-        if (open) setActiveTab("invitations")
-      }}
-    >
+    <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <Button
@@ -126,22 +178,26 @@ export function NotificationsDropdown({
 
       <DropdownMenuContent align="end" className="w-[360px]! p-0">
         <div className="flex items-center gap-1 border-b border-border p-2">
-          {(["invitations", "tasks", "members"] as NotificationTab[]).map(
-            (tab) => (
-              <Button
-                key={tab}
-                variant={activeTab === tab ? "secondary" : "ghost"}
-                size="xs"
-                onClick={() => setActiveTab(tab)}
-              >
-                {tabLabels[tab]}
-              </Button>
-            )
-          )}
+          {tabOrder.map((tab) => (
+            <Button
+              key={tab}
+              variant={activeTab === tab ? "secondary" : "ghost"}
+              size="xs"
+              onClick={() => handleTabChange(tab)}
+              disabled={isSwitchingTab}
+            >
+              {tabLabels[tab]}
+              {tabCounts[tab] > 0 && (
+                <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">
+                  {tabCounts[tab]}
+                </span>
+              )}
+            </Button>
+          ))}
         </div>
 
         <div className="max-h-80 overflow-y-auto">
-          {visible.length === 0 ? (
+          {items.length === 0 ? (
             <div className="px-4 py-10 text-center">
               <Clock className="mx-auto size-6 text-muted-foreground" />
               <p className="mt-3 text-sm font-medium text-foreground">
@@ -150,16 +206,45 @@ export function NotificationsDropdown({
             </div>
           ) : (
             <ul className="divide-y divide-border">
-              {visible.map((notification) => (
+              {items.map((notification) => (
                 <li key={notification.id}>
                   <NotificationRow
-                    notification={{ ...notification, isRead: isLocallyRead(notification) }}
+                    notification={{
+                      ...notification,
+                      isRead: isLocallyRead(notification),
+                    }}
                     onRead={handleRead}
                   />
                 </li>
               ))}
             </ul>
           )}
+        </div>
+
+        <div
+          className={
+            items.length === 0
+              ? "hidden"
+              : "border-t border-border p-2"
+          }
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={handleLoadMore}
+            disabled={isLoadingMore || !hasMore}
+          >
+            {isLoadingMore ? (
+              <Loader2 className="animate-spin" />
+            ) : hasMore ? (
+              <span>
+                Load more ({items.length} of {itemTotal})
+              </span>
+            ) : (
+              <span>All loaded</span>
+            )}
+          </Button>
         </div>
 
         <div className="border-t border-border p-2">

@@ -7,15 +7,21 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { NotificationsDropdown } from "./NotificationsDropdown"
-import type { Notification } from "@/db/queries/notifications"
+import type { Notification, NotificationTab } from "@/db/queries/notifications"
 import { authClient } from "@/lib/auth-client"
 
 export function Navbar({
   withSidebarTrigger = false,
   notifications = [],
+  notificationTotal = 0,
+  notificationCounts = { invitations: 0, tasks: 0, members: 0 },
+  notificationUnreadTotal = 0,
 }: {
   withSidebarTrigger?: boolean
   notifications?: Notification[]
+  notificationTotal?: number
+  notificationCounts?: Record<NotificationTab, number>
+  notificationUnreadTotal?: number
 }) {
   const router = useRouter()
   const { data: session, isPending } = authClient.useSession()
@@ -43,7 +49,12 @@ export function Navbar({
           <Spinner className="size-4" />
         ) : session ? (
           <>
-            <NotificationsDropdown notifications={notifications} />
+            <NotificationsDropdown
+              notifications={notifications}
+              total={notificationTotal}
+              counts={notificationCounts}
+              unreadTotal={notificationUnreadTotal}
+            />
             <ModeToggle />
             <Button
               variant="outline"

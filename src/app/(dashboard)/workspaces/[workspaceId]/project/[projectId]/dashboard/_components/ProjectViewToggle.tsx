@@ -18,7 +18,7 @@ export default function ProjectViewToggle({
   ]
 
   return (
-    <div className="flex shrink-0 items-center rounded-lg border border-border/60 bg-muted/40 p-1">
+    <div className="flex shrink-0 items-center rounded-lg border-0 bg-muted/40 p-1">
       {items.map((item) => (
         <Link
           key={item.key}

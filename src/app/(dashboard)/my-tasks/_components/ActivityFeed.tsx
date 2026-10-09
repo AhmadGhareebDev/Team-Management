@@ -1,11 +1,18 @@
-import { headers } from "next/headers"
-import { Activity } from "lucide-react"
-import { auth } from "@/lib/auth"
-import { getRecentActivityForUser, type RecentActivity } from "@/db/queries/activity"
+"use client"
+
+import * as React from "react"
+import { useTransition } from "react"
+import { Activity, Loader2 } from "lucide-react"
+import { toast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { formatRelativeTime } from "@/lib/relative-time"
 import { getInitials, statusLabels } from "@/lib/task-display"
 import type { TaskStatus } from "@/db/validations"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
+import { loadMoreActivity } from "@/actions/activity"
+import type { RecentActivity } from "@/db/queries/activity"
+import { PAGE_SIZES } from "@/lib/pagination"
 
 function quote(value: string | undefined, fallback: string) {
   return value ? `"${value}"` : fallback
@@ -71,16 +78,76 @@ function describeActivity(item: RecentActivity) {
   }
 }
 
-export default async function ActivityFeed() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) {
-    return null
-  }
-
-  const items = await getRecentActivityForUser(session.user.id, 15)
+function ActivityRow({ item }: { item: RecentActivity }) {
+  const actorName = item.actor?.name ?? "Someone"
 
   return (
-    <section className="rounded-xl border border-border/60 bg-card">
+    <li className="flex items-start gap-3 px-4 py-3">
+      <ImageKitAvatar
+        src={item.actor?.avatar_url ?? null}
+        alt={actorName}
+        initials={getInitials(actorName)}
+        size={28}
+        className="mt-0.5 size-7"
+      />
+
+      <div className="min-w-0 flex-1">
+        <p className="text-sm leading-6 text-foreground">
+          <span className="font-medium">{actorName}</span> {describeActivity(item)}
+        </p>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          {[item.workspace?.name, item.project?.name]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      </div>
+
+      <span className="mt-1 shrink-0 text-xs text-muted-foreground">
+        {formatRelativeTime(new Date(item.createdAt))}
+      </span>
+    </li>
+  )
+}
+
+export default function ActivityFeed({
+  initialItems,
+  initialTotal,
+}: {
+  initialItems: RecentActivity[]
+  initialTotal: number
+}) {
+  const [items, setItems] = React.useState(initialItems)
+  const [total, setTotal] = React.useState(initialTotal)
+  const [isPending, startTransition] = useTransition()
+
+  const hasMore = items.length < total
+
+  const handleLoadMore = () => {
+    startTransition(async () => {
+      const result = await loadMoreActivity({
+        offset: items.length,
+        limit: PAGE_SIZES.activity,
+      })
+
+      if ("error" in result && result.error) {
+        toast.add({
+          type: "error",
+          description: "We couldn't load more activity. Please try again.",
+        })
+        return
+      }
+
+      setItems((prev) => {
+        const seen = new Set(prev.map((item) => item.id))
+        const next = result.items.filter((item) => !seen.has(item.id))
+        return [...prev, ...next]
+      })
+      setTotal(result.total)
+    })
+  }
+
+  return (
+    <section className="rounded-xl border-0 bg-card shadow-sm ring-1 ring-foreground/5">
       <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
         <div className="flex items-center gap-2">
           <Activity className="size-4 text-muted-foreground" />
@@ -89,9 +156,9 @@ export default async function ActivityFeed() {
           </h2>
         </div>
         <span className="text-xs text-muted-foreground">
-          {items.length === 0
+          {total === 0
             ? "Nothing yet"
-            : `${items.length} update${items.length === 1 ? "" : "s"}`}
+            : `${items.length} of ${total} update${total === 1 ? "" : "s"}`}
         </span>
       </div>
 
@@ -100,39 +167,34 @@ export default async function ActivityFeed() {
           Changes made across your workspaces will show up here.
         </p>
       ) : (
-        <ul className="divide-y divide-border/40">
-          {items.map((item) => {
-            const actorName = item.actor?.name ?? "Someone"
+        <>
+          <ul className="max-h-96 divide-y divide-border/40 overflow-y-auto scrollbar-thin">
+            {items.map((item) => (
+              <ActivityRow key={item.id} item={item} />
+            ))}
+          </ul>
 
-            return (
-              <li key={item.id} className="flex items-start gap-3 px-4 py-3">
-                <ImageKitAvatar
-                  src={item.actor?.avatar_url ?? null}
-                  alt={actorName}
-                  initials={getInitials(actorName)}
-                  size={28}
-                  className="mt-0.5 size-7"
-                />
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm leading-6 text-foreground">
-                    <span className="font-medium">{actorName}</span>{" "}
-                    {describeActivity(item)}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {[item.workspace?.name, item.project?.name]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                </div>
-
-                <span className="mt-1 shrink-0 text-xs text-muted-foreground">
-                  {formatRelativeTime(new Date(item.createdAt))}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+          <div
+            className={cn(
+              "border-t border-border/40 p-2",
+              !hasMore && "invisible"
+            )}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={handleLoadMore}
+              disabled={isPending || !hasMore}
+            >
+              {isPending ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <span>Load more activity</span>
+              )}
+            </Button>
+          </div>
+        </>
       )}
     </section>
   )
