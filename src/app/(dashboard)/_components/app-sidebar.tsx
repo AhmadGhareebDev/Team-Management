@@ -13,7 +13,7 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
-import { Settings, LucideFolderMinus, BellRing, ListTodo, FolderKanban } from "lucide-react"
+import { Settings, LucideFolderMinus, ListTodo, FolderKanban } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 
 export function AppSidebar() {
@@ -77,12 +77,6 @@ export function AppSidebar() {
               <SidebarMenuButton tooltip="WorkSpaces" render={<Link href="/workspaces" />}>
                 <LucideFolderMinus className="size-4" />
                 <span>WorkSpaces</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Notifications" render={<Link href="/notifications" />}>
-                <BellRing className="size-4" />
-                <span>Notifications</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

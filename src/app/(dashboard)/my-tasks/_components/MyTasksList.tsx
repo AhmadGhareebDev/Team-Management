@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth"
 import { getUserAssignedTasks } from "@/db/queries/task"
 import type { TaskPriority, TaskSort } from "@/db/queries/task"
 import { getUserWorkSpaces } from "@/db/queries/workspaces"
-import { getUserProjects } from "@/db/queries/project"
+import { getUserProjectOptions } from "@/db/queries/project"
 import { Button } from "@/components/ui/button"
 import ListPager from "@/components/web/ListPager"
 import UrlSelect from "@/components/web/UrlSelect"
@@ -99,7 +99,9 @@ export default async function MyTasksList({
       sort,
     }),
     getUserWorkSpaces(session.user.id),
-    getUserProjects(session.user.id, { pageSize: 200 }),
+    // Only id/name/workspaceId, and narrowed to the chosen workspace so the
+    // dropdown stays small as membership grows.
+    getUserProjectOptions(session.user.id, { workspaceId: params.workspace }),
   ])
 
   const tasks = result.items
@@ -116,13 +118,7 @@ export default async function MyTasksList({
   const selectedWorkspaceId = params.workspace
   const projectOptions: UrlSelectOption[] = [
     { value: "all", label: "All projects" },
-    ...projectRows.items
-      .filter(
-        (p) =>
-          !selectedWorkspaceId ||
-          p.workspaceId === selectedWorkspaceId
-      )
-      .map((p) => ({ value: p.id, label: p.name })),
+    ...projectRows.map((p) => ({ value: p.id, label: p.name })),
   ]
 
   return (

@@ -2,11 +2,14 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "./_components/app-sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Navbar } from "@/components/web/Navbar"
+import { NotificationsProvider } from "@/components/web/NotificationsProvider"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import {
   getUserNotifications,
   getUserNotificationCounts,
+  getDefaultNotificationTab,
+  type NotificationTab,
 } from "@/db/queries/notifications"
 import { runNotificationsScan } from "@/lib/notifications"
 import { PAGE_SIZES } from "@/lib/pagination"
@@ -19,11 +22,11 @@ export default async function DashboardLayout({
 }) {
   const session = await auth.api.getSession({ headers: await headers() })
 
-  let notifications: Awaited<ReturnType<typeof getUserNotifications>> = {
-    items: [],
-    total: 0,
-  }
-  let counts = { total: { invitations: 0, tasks: 0, members: 0 }, unread: { invitations: 0, tasks: 0, members: 0 } }
+  let initialTab: NotificationTab = "invitations"
+  let notifications: Awaited<ReturnType<typeof getUserNotifications>>["items"] = []
+  let notificationTotal = 0
+  let counts = { invitations: 0, tasks: 0, members: 0 }
+  let unreadTotal = 0
 
   if (session) {
     try {
@@ -32,37 +35,41 @@ export default async function DashboardLayout({
       console.error("Error running notifications scan:", error)
     }
 
-    const [result, countResult] = await Promise.all([
-      getUserNotifications(session.user.id, {
-        tab: "invitations",
-        limit: PAGE_SIZES.notificationsDropdown,
-      }),
-      getUserNotificationCounts(session.user.id),
-    ])
+    // The default tab depends on the counts, so these two cannot run in
+    // parallel. Seeding the tab we actually open on keeps the server and
+    // client in agreement.
+    const countResult = await getUserNotificationCounts(session.user.id)
+    counts = countResult.total
+    unreadTotal = Object.values(countResult.unread).reduce((sum, n) => sum + n, 0)
 
-    notifications = result
-    counts = countResult
+    initialTab = getDefaultNotificationTab(countResult.total)
+    const result = await getUserNotifications(session.user.id, {
+      tab: initialTab,
+      limit: PAGE_SIZES.notificationsDropdown,
+    })
+    notifications = result.items
+    notificationTotal = result.total
   }
 
-  const unreadTotal = Object.values(counts.unread).reduce((sum, n) => sum + n, 0)
-
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <Navbar
-          withSidebarTrigger
-          notifications={notifications.items}
-          notificationTotal={notifications.total}
-          notificationCounts={counts.total}
-          notificationUnreadTotal={unreadTotal}
-        />
-        <main className="flex-1 p-6">
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+    <NotificationsProvider
+      initialTab={initialTab}
+      notifications={notifications}
+      total={notificationTotal}
+      counts={counts}
+      unreadTotal={unreadTotal}
+    >
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <Navbar withSidebarTrigger />
+          <main className="flex-1 p-6">
+            <TooltipProvider>
+              {children}
+            </TooltipProvider>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </NotificationsProvider>
   )
 }

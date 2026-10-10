@@ -5,7 +5,6 @@ export const PAGE_SIZES = {
   workspaces: 9,
   members: 20,
   activity: 15,
-  notificationsPage: 20,
   notificationsDropdown: 15,
 } as const
 

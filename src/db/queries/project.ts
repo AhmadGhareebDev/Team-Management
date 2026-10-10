@@ -110,6 +110,51 @@ export async function getUserProjectAccess(projectId: string, userId: string) {
 }
 export type UserProjectAccess = Awaited<ReturnType<typeof getUserProjectAccess>>;
 
+/**
+ * Lightweight project list for filter dropdowns. Unlike `getUserProjects`
+ * it selects only the three columns the dropdown renders and skips the
+ * `members` relation, so the extra rows cost nothing to fetch.
+ */
+export async function getUserProjectOptions(
+    userId: string,
+    options: { workspaceId?: string; limit?: number } = {}
+) {
+    const limit = options.limit ?? 100;
+
+    return await db
+        .select({
+            id: project.id,
+            name: project.name,
+            workspaceId: project.workspaceId,
+        })
+        .from(project)
+        .where(
+            and(
+                exists(
+                    db
+                        .select({ projectId: projectMembers.projectId })
+                        .from(projectMembers)
+                        .where(
+                            and(
+                                eq(projectMembers.projectId, project.id),
+                                eq(projectMembers.userId, userId)
+                            )
+                        )
+                ),
+                options.workspaceId
+                    ? eq(project.workspaceId, options.workspaceId)
+                    : undefined
+            )
+        )
+        .orderBy(asc(project.name))
+        .limit(limit);
+}
+
+/** Cap so a misconfigured pageSize can never pull an unbounded result. */
+function clampPageSize(pageSize: number) {
+    return Math.min(100, Math.max(1, pageSize));
+}
+
 export async function getUserProjects(
     userId: string,
     options: {
@@ -119,7 +164,7 @@ export async function getUserProjects(
         sort?: ProjectSort;
     } = {}
 ): Promise<Paginated<UserProject>> {
-    const pageSize = options.pageSize ?? PAGE_SIZES.projects;
+    const pageSize = clampPageSize(options.pageSize ?? PAGE_SIZES.projects);
     const page = Math.max(1, options.page ?? 1);
     const offset = (page - 1) * pageSize;
     const filters = options.filters ?? {};

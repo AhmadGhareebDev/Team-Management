@@ -11,7 +11,7 @@ import { PAGE_SIZES } from "@/lib/pagination"
 export async function loadNotifications({
   tab,
   offset = 0,
-  limit = PAGE_SIZES.notificationsPage,
+  limit = PAGE_SIZES.notificationsDropdown,
 }: {
   tab: NotificationTab
   offset?: number

@@ -5,6 +5,7 @@ import { task, taskAssignees, taskDependencies, projectMembers } from "@/db/sche
 import { eq, and, or, inArray } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
+import { after } from "next/server"
 import { getUserProjectAccess } from "@/db/queries/project"
 import { insertTaskSchema,
     updateTaskSchema,
@@ -105,14 +106,20 @@ async function notifyUnblockedDependents({
             const body = `Task "${dependent.title}" is no longer blocked${reasonLabel}. You can start now.`
 
             for (const userId of notifyUserIds) {
-                await createNotification({
-                    userId,
-                    actorId,
-                    workspaceId,
-                    projectId,
-                    taskId: dependent.id,
-                    type: "task_unblocked",
-                    body,
+                after(async () => {
+                    try {
+                        await createNotification({
+                            userId,
+                            actorId,
+                            workspaceId,
+                            projectId,
+                            taskId: dependent.id,
+                            type: "task_unblocked",
+                            body,
+                        })
+                    } catch (error) {
+                        console.error("Error notifying unblocked dependent:", error)
+                    }
                 })
             }
         }
@@ -633,36 +640,40 @@ export async function setTaskAssignees({
         if (added.length > 0 || removed.length > 0) {
             for (const userId of added) {
                 if (userId === session.user.id) continue
-                try {
-                    await createNotification({
-                        userId,
-                        actorId: session.user.id,
-                        workspaceId: access.workspaceId,
-                        projectId,
-                        taskId,
-                        type: "task_assigned",
-                        body: `You've been assigned to task "${existing!.title}".`,
-                    })
-                } catch (error) {
-                    console.error("Error notifying new assignee:", error)
-                }
+                after(async () => {
+                    try {
+                        await createNotification({
+                            userId,
+                            actorId: session.user.id,
+                            workspaceId: access.workspaceId,
+                            projectId,
+                            taskId,
+                            type: "task_assigned",
+                            body: `You've been assigned to task "${existing!.title}".`,
+                        })
+                    } catch (error) {
+                        console.error("Error notifying new assignee:", error)
+                    }
+                })
             }
 
             for (const userId of removed) {
                 if (userId === session.user.id) continue
-                try {
-                    await createNotification({
-                        userId,
-                        actorId: session.user.id,
-                        workspaceId: access.workspaceId,
-                        projectId,
-                        taskId,
-                        type: "task_reassigned",
-                        body: `Task "${existing!.title}" was reassigned away from you.`,
-                    })
-                } catch (error) {
-                    console.error("Error notifying removed assignee:", error)
-                }
+                after(async () => {
+                    try {
+                        await createNotification({
+                            userId,
+                            actorId: session.user.id,
+                            workspaceId: access.workspaceId,
+                            projectId,
+                            taskId,
+                            type: "task_reassigned",
+                            body: `Task "${existing!.title}" was reassigned away from you.`,
+                        })
+                    } catch (error) {
+                        console.error("Error notifying removed assignee:", error)
+                    }
+                })
             }
 
             const names = await getUserNames([...added, ...removed])

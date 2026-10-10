@@ -137,7 +137,7 @@ export async function getUserAssignedTasks(
         sort?: "due_asc" | "newest" | "priority";
     } = {}
 ): Promise<Paginated<UserAssignedTaskItem>> {
-    const pageSize = options.pageSize ?? PAGE_SIZES.tasks;
+    const pageSize = Math.min(100, Math.max(1, options.pageSize ?? PAGE_SIZES.tasks));
     const page = Math.max(1, options.page ?? 1);
     const offset = (page - 1) * pageSize;
     const filters = options.filters ?? {};

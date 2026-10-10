@@ -93,6 +93,15 @@ export type NotificationTabCounts = {
     unread: NotificationCounts;
 };
 
+/**
+ * The bell opens on the first tab that actually has something in it. Falling
+ * back to a hardcoded tab means most users land on an empty list.
+ */
+export function getDefaultNotificationTab(counts: NotificationCounts): NotificationTab {
+    const order: NotificationTab[] = ["invitations", "tasks", "members"];
+    return order.find((tab) => counts[tab] > 0) ?? "invitations";
+}
+
 export async function getUserNotificationCounts(
     userId: string
 ): Promise<NotificationTabCounts> {

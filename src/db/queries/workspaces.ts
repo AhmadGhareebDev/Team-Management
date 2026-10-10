@@ -4,7 +4,7 @@ import { project } from "@/db/schemas/project";
 import { task } from "@/db/schemas/task";
 import { taskAssignees } from "@/db/schemas/taskAssignees";
 import { user } from "@/db/schemas/auth-schema";
-import { eq, and, inArray, asc, desc, ne, lte, ilike, or, exists, sql, type SQL } from "drizzle-orm";
+import { eq, and, inArray, asc, desc, ne, lte, ilike, or, sql, type SQL } from "drizzle-orm";
 import { workspace } from "@/db/schemas"
 import type { TaskStatus } from "@/db/validations"
 import { PAGE_SIZES, type Paginated } from "@/lib/pagination";
@@ -43,42 +43,48 @@ export async function getUserWorkSpacesPage(
         sort?: "name" | "newest";
     } = {}
 ): Promise<Paginated<WorkspaceWithRole>> {
-    const pageSize = options.pageSize ?? PAGE_SIZES.workspaces;
+    const pageSize = Math.min(100, Math.max(1, options.pageSize ?? PAGE_SIZES.workspaces));
     const page = Math.max(1, options.page ?? 1);
     const offset = (page - 1) * pageSize;
 
     const where = eq(workspaceMembers.userId, userId);
 
+    // Explicit join so the name sort is a plain indexed sort instead of a
+    // correlated subquery; `db.query` cannot order by a related table column.
+    const orderBy: SQL[] =
+        options.sort === "newest"
+            ? [desc(workspaceMembers.joinedAt)]
+            : [asc(workspace.name)];
+
     const [items, countRows] = await Promise.all([
-        db.query.workspaceMembers.findMany({
-            where,
-            // The correlated subquery needs its own alias, so the columns are
-            // spelled out instead of interpolated (interpolation would qualify
-            // them with the outer `workspaceMembers` table).
-            orderBy:
-                options.sort === "newest"
-                    ? [desc(workspaceMembers.joinedAt)]
-                    : [
-                        sql`(select w.name from workspace w where w.id = ${workspaceMembers.workspaceId}) asc`,
-                    ],
-            limit: pageSize,
-            offset,
-            with: {
+        db
+            .select({
+                id: workspaceMembers.id,
+                workspaceId: workspaceMembers.workspaceId,
+                userId: workspaceMembers.userId,
+                role: workspaceMembers.role,
+                joinedAt: workspaceMembers.joinedAt,
                 workspace: {
-                    columns: {
-                        id: true,
-                        name: true,
-                    }
-                }
-            }
-        }),
+                    id: workspace.id,
+                    name: workspace.name,
+                },
+            })
+            .from(workspaceMembers)
+            .innerJoin(workspace, eq(workspace.id, workspaceMembers.workspaceId))
+            .where(where)
+            .orderBy(...orderBy)
+            .limit(pageSize)
+            .offset(offset),
         db
             .select({ count: sql<number>`count(*)::int` })
             .from(workspaceMembers)
             .where(where),
     ]);
 
-    return { items, total: countRows[0]?.count ?? 0 };
+    return {
+        items: items as unknown as WorkspaceWithRole[],
+        total: countRows[0]?.count ?? 0,
+    };
 }
 
 export  async function getWorkspaceById(workspaceId: string) {
@@ -145,84 +151,68 @@ export async function getWorkspaceMembersPage(
         sort?: "joined" | "role" | "name";
     } = {}
 ): Promise<Paginated<WorkspaceMemberWithUser>> {
-    const pageSize = options.pageSize ?? PAGE_SIZES.members;
+    const pageSize = Math.min(100, Math.max(1, options.pageSize ?? PAGE_SIZES.members));
     const page = Math.max(1, options.page ?? 1);
     const offset = (page - 1) * pageSize;
 
-    // `db.query` aliases the base table as "workspaceMembers", while the
-    // matching count query uses the real "workspace_members" name. The
-    // correlated user lookup therefore needs the qualified column name passed
-    // in rather than interpolated.
-    const searchCondition = (memberIdRef: SQL) => {
-        if (!options.search) return undefined;
+    // Joined explicitly rather than correlated, so the search and the name
+    // sort can use the indexes on user.name / user.username. `db.query` would
+    // have forced a per-row subquery for each.
+    const conditions = [eq(workspaceMembers.workspaceId, workspaceId)];
+
+    if (options.role) {
+        conditions.push(eq(workspaceMembers.role, options.role));
+    }
+
+    if (options.search) {
         const pattern = `%${options.search.toLowerCase()}%`;
-        return exists(
-            db
-                .select({ id: user.id })
-                .from(user)
-                .where(
-                    and(
-                        sql`"user".id = ${memberIdRef}`,
-                        or(ilike(user.name, pattern), ilike(user.username, pattern))
-                    )
-                )
+        const nameMatch = or(
+            ilike(user.name, pattern),
+            ilike(user.username, pattern)
         );
-    };
+        if (nameMatch) {
+            conditions.push(nameMatch);
+        }
+    }
 
-    const rowsConditions = [eq(workspaceMembers.workspaceId, workspaceId)];
-    if (options.role) {
-        rowsConditions.push(eq(workspaceMembers.role, options.role));
-    }
-    const rowSearch = searchCondition(sql`"workspaceMembers".user_id`);
-    if (rowSearch) {
-        rowsConditions.push(rowSearch);
-    }
-    const where = and(...rowsConditions);
-
-    const countConditions = [eq(workspaceMembers.workspaceId, workspaceId)];
-    if (options.role) {
-        countConditions.push(eq(workspaceMembers.role, options.role));
-    }
-    const countSearch = searchCondition(sql`"workspace_members".user_id`);
-    if (countSearch) {
-        countConditions.push(countSearch);
-    }
-    const countWhere = and(...countConditions);
+    const where = and(...conditions);
 
     let orderBy: SQL[] = [asc(workspaceMembers.joinedAt)];
     if (options.sort === "role") {
         orderBy = [
-            sql`case "workspaceMembers".role when 'owner' then 0 when 'admin' then 1 else 2 end`,
+            sql`case ${workspaceMembers.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
             asc(workspaceMembers.joinedAt),
         ];
     } else if (options.sort === "name") {
-        orderBy = [
-            // Same aliasing caveat as the search filter above.
-            sql`(select lower(u.name) from "user" u where u.id = "workspaceMembers".user_id) asc`,
-        ];
+        orderBy = [asc(user.name), asc(workspaceMembers.joinedAt)];
     }
 
     const [items, countRows] = await Promise.all([
-        db.query.workspaceMembers.findMany({
-            where,
-            orderBy,
-            limit: pageSize,
-            offset,
-            with: {
+        db
+            .select({
+                id: workspaceMembers.id,
+                workspaceId: workspaceMembers.workspaceId,
+                userId: workspaceMembers.userId,
+                role: workspaceMembers.role,
+                joinedAt: workspaceMembers.joinedAt,
                 user: {
-                    columns: {
-                        id: true,
-                        name: true,
-                        username: true,
-                        avatar_url: true,
-                    }
-                }
-            }
-        }),
+                    id: user.id,
+                    name: user.name,
+                    username: user.username,
+                    avatar_url: user.avatar_url,
+                },
+            })
+            .from(workspaceMembers)
+            .innerJoin(user, eq(user.id, workspaceMembers.userId))
+            .where(where)
+            .orderBy(...orderBy)
+            .limit(pageSize)
+            .offset(offset),
         db
             .select({ count: sql<number>`count(*)::int` })
             .from(workspaceMembers)
-            .where(countWhere),
+            .innerJoin(user, eq(user.id, workspaceMembers.userId))
+            .where(where),
     ]);
 
     return {
@@ -335,7 +325,7 @@ export async function getWorkspaceProjectsWithMembers(
         sort?: ProjectSort;
     } = {}
 ): Promise<Paginated<WorkspaceProjectWithMembersItem>> {
-    const pageSize = options.pageSize ?? PAGE_SIZES.workspaceProjects;
+    const pageSize = Math.min(100, Math.max(1, options.pageSize ?? PAGE_SIZES.workspaceProjects));
     const page = Math.max(1, options.page ?? 1);
     const offset = (page - 1) * pageSize;
     const filters = options.filters ?? {};

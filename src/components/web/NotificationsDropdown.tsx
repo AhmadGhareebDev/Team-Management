@@ -1,9 +1,6 @@
 "use client"
 
-import * as React from "react"
-import { useTransition } from "react"
 import { Bell, CheckCheck, Clock, Loader2 } from "lucide-react"
-import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -12,19 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
-import { toast } from "@/components/ui/toast"
 import NotificationRow from "@/components/web/NotificationRow"
-import { markAllNotificationsAsRead } from "@/actions/notifications"
-import {
-  loadNotifications,
-  loadNotificationTabCounts,
-} from "@/actions/notifications-loader"
-import type {
-  Notification,
-  NotificationTab,
-} from "@/db/queries/notifications"
-import { resolveActionError } from "@/lib/error-messages"
-import { PAGE_SIZES } from "@/lib/pagination"
+import { useNotifications } from "@/components/web/NotificationsProvider"
+import type { NotificationTab } from "@/db/queries/notifications"
 
 const tabLabels: Record<NotificationTab, string> = {
   invitations: "Invitations",
@@ -34,126 +21,23 @@ const tabLabels: Record<NotificationTab, string> = {
 
 const tabOrder: NotificationTab[] = ["invitations", "tasks", "members"]
 
-export function NotificationsDropdown({
-  notifications,
-  total,
-  counts,
-  unreadTotal,
-}: {
-  notifications: Notification[]
-  total: number
-  counts: Record<NotificationTab, number>
-  unreadTotal: number
-}) {
-  const router = useRouter()
-  const [items, setItems] = React.useState(notifications)
-  const [itemTotal, setItemTotal] = React.useState(total)
-  const [activeTab, setActiveTab] = React.useState<NotificationTab>("invitations")
-  const [tabCounts, setTabCounts] = React.useState(counts)
-  const [unreadCount, setUnreadCount] = React.useState(unreadTotal)
-  const [readIds, setReadIds] = React.useState<Set<string>>(() => new Set())
-  const [isMarkingAll, startMarkAllTransition] = useTransition()
-  const [isSwitchingTab, startTabTransition] = useTransition()
-  const [isLoadingMore, startLoadMoreTransition] = useTransition()
-
-  // Notifications are never removed from the list. Marking as read only
-  // clears the unread dot, so track it locally until the server catches up.
-  const isLocallyRead = (n: Notification) => n.isRead || readIds.has(n.id)
-
-  const hasMore = items.length < itemTotal
-
-  const handleRead = (id: string) => {
-    setReadIds((prev) => {
-      if (prev.has(id)) return prev
-      setUnreadCount((count) => Math.max(0, count - 1))
-      return new Set(prev).add(id)
-    })
-  }
-
-  const handleTabChange = (tab: NotificationTab) => {
-    if (tab === activeTab) return
-
-    setActiveTab(tab)
-
-    startTabTransition(async () => {
-      const [result, countResult] = await Promise.all([
-        loadNotifications({
-          tab,
-          offset: 0,
-          limit: PAGE_SIZES.notificationsDropdown,
-        }),
-        loadNotificationTabCounts(),
-      ])
-
-      if ("error" in result && result.error) {
-        toast.add({
-          type: "error",
-          description: "We couldn't load those notifications. Please try again.",
-        })
-        return
-      }
-
-      setItems(result.items)
-      setItemTotal(result.total)
-
-      if (!("error" in countResult) && "unread" in countResult) {
-        setTabCounts(countResult.total)
-        setUnreadCount(
-          Object.values(countResult.unread).reduce((sum, n) => sum + n, 0)
-        )
-      }
-    })
-  }
-
-  const handleLoadMore = () => {
-    startLoadMoreTransition(async () => {
-      const result = await loadNotifications({
-        tab: activeTab,
-        offset: items.length,
-        limit: PAGE_SIZES.notificationsDropdown,
-      })
-
-      if ("error" in result && result.error) {
-        toast.add({
-          type: "error",
-          description: "We couldn't load more notifications. Please try again.",
-        })
-        return
-      }
-
-      setItems((prev) => {
-        const seen = new Set(prev.map((item) => item.id))
-        const next = result.items.filter((item) => !seen.has(item.id))
-        return [...prev, ...next]
-      })
-      setItemTotal(result.total)
-    })
-  }
-
-  const handleMarkAll = () => {
-    startMarkAllTransition(async () => {
-      const result = await markAllNotificationsAsRead()
-
-      if (result?.error) {
-        toast.add({
-          type: "error",
-          description: resolveActionError(
-            result.error,
-            "We couldn't mark your notifications as read. Please try again."
-          ),
-        })
-        return
-      }
-
-      setReadIds(new Set(items.map((n) => n.id)))
-      setUnreadCount(0)
-      router.refresh()
-      toast.add({
-        type: "success",
-        description: "All notifications marked as read.",
-      })
-    })
-  }
+export function NotificationsDropdown() {
+  const {
+    activeTab,
+    items,
+    total,
+    counts,
+    unreadCount,
+    hasMore,
+    isSwitchingTab,
+    isLoadingMore,
+    isMarkingAll,
+    isLocallyRead,
+    setTab,
+    loadMore,
+    markRead,
+    markAllRead,
+  } = useNotifications()
 
   return (
     <DropdownMenu>
@@ -183,13 +67,13 @@ export function NotificationsDropdown({
               key={tab}
               variant={activeTab === tab ? "secondary" : "ghost"}
               size="xs"
-              onClick={() => handleTabChange(tab)}
+              onClick={() => setTab(tab)}
               disabled={isSwitchingTab}
             >
               {tabLabels[tab]}
-              {tabCounts[tab] > 0 && (
+              {counts[tab] > 0 && (
                 <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">
-                  {tabCounts[tab]}
+                  {counts[tab]}
                 </span>
               )}
             </Button>
@@ -213,7 +97,7 @@ export function NotificationsDropdown({
                       ...notification,
                       isRead: isLocallyRead(notification),
                     }}
-                    onRead={handleRead}
+                    onRead={markRead}
                   />
                 </li>
               ))}
@@ -223,23 +107,21 @@ export function NotificationsDropdown({
 
         <div
           className={
-            items.length === 0
-              ? "hidden"
-              : "border-t border-border p-2"
+            items.length === 0 ? "hidden" : "border-t border-border p-2"
           }
         >
           <Button
             variant="outline"
             size="sm"
             className="w-full"
-            onClick={handleLoadMore}
+            onClick={loadMore}
             disabled={isLoadingMore || !hasMore}
           >
             {isLoadingMore ? (
               <Loader2 className="animate-spin" />
             ) : hasMore ? (
               <span>
-                Load more ({items.length} of {itemTotal})
+                Load more ({items.length} of {total})
               </span>
             ) : (
               <span>All loaded</span>
@@ -252,7 +134,7 @@ export function NotificationsDropdown({
             variant="ghost"
             size="sm"
             className="w-full"
-            onClick={handleMarkAll}
+            onClick={markAllRead}
             disabled={isMarkingAll || unreadCount === 0}
           >
             {isMarkingAll ? (

@@ -37,6 +37,11 @@ export const notification = pgTable("notification", {
   // An invitation is one row that is re-armed on re-invite, so it must map to
   // exactly one notification. NULLs (task notifications) are exempt.
   uniqueIndex("notification_workspace_invitation_uidx").on(table.workspaceInvitationId),
+  // The scan runs from both the dashboard layout and the notifications page,
+  // so two concurrent after() callbacks can target the same
+  // (user, task, type). Postgres treats NULLs as distinct, so notifications
+  // without a task (member/invitation events) are exempt from this constraint.
+  uniqueIndex("notification_user_task_type_uidx").on(table.userId, table.taskId, table.type),
   index("notification_project_id_idx").on(table.projectId),
   index("notification_task_id_idx").on(table.taskId),
 ]

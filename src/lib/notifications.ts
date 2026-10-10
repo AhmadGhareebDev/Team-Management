@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto"
+import { after } from "next/server"
 import { db } from "@/db"
 import {
   notification,
@@ -29,17 +30,24 @@ export async function createNotification({
   type: NotificationTypeName
   body: string
 }) {
-  await db.insert(notification).values({
-    id: randomUUID(),
-    userId,
-    actorId: actorId ?? null,
-    workspaceId: workspaceId ?? null,
-    projectId: projectId ?? null,
-    taskId: taskId ?? null,
-    type,
-    body,
-    isRead: false,
-  })
+  // notification_user_task_type_uidx makes the dedupe a database guarantee, so
+  // two concurrent after() callbacks racing on the same (user, task, type)
+  // result in one row instead of a unique-violation error. The application-level
+  // hasNotified() check still saves the round trip in the common case.
+  await db
+    .insert(notification)
+    .values({
+      id: randomUUID(),
+      userId,
+      actorId: actorId ?? null,
+      workspaceId: workspaceId ?? null,
+      projectId: projectId ?? null,
+      taskId: taskId ?? null,
+      type,
+      body,
+      isRead: false,
+    })
+    .onConflictDoNothing()
 }
 
 export async function hasNotified({
@@ -199,14 +207,19 @@ export async function runNotificationsScan(userId: string) {
     body: string
   }) => {
     for (const assigneeId of assigneeIdsByTask.get(taskId) ?? []) {
-      if (await hasNotified({ userId: assigneeId, taskId, type })) continue
-      await createNotification({
-        userId: assigneeId,
-        workspaceId: workspaceByProjectId.get(projectId) ?? null,
-        projectId,
-        taskId,
-        type,
-        body,
+      // The dedupe check has to run inside the deferred callback, not before
+      // it: notifyManagers below can target the same (user, task, type), and
+      // a check made now would not see an insert that has not landed yet.
+      after(async () => {
+        if (await hasNotified({ userId: assigneeId, taskId, type })) return
+        await createNotification({
+          userId: assigneeId,
+          workspaceId: workspaceByProjectId.get(projectId) ?? null,
+          projectId,
+          taskId,
+          type,
+          body,
+        })
       })
     }
   }
@@ -225,14 +238,16 @@ export async function runNotificationsScan(userId: string) {
     const workspaceId = workspaceByProjectId.get(projectId)
     if (!workspaceId) return
     for (const managerId of managerIdsByWorkspace.get(workspaceId) ?? []) {
-      if (await hasNotified({ userId: managerId, taskId, type })) continue
-      await createNotification({
-        userId: managerId,
-        workspaceId,
-        projectId,
-        taskId,
-        type,
-        body,
+      after(async () => {
+        if (await hasNotified({ userId: managerId, taskId, type })) return
+        await createNotification({
+          userId: managerId,
+          workspaceId,
+          projectId,
+          taskId,
+          type,
+          body,
+        })
       })
     }
   }
