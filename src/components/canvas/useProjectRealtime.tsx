@@ -21,7 +21,7 @@ function CanvasListener({
 
 /**
  * Subscribes to one project's canvas channel and hands every message to
- * `onEvent`. Returns the provider elements to render, or null when there is no
+ * `onEvent`. Returns the provider elements to regitnder, or null when there is no
  * client yet (server render) or no project.
  *
  * The handler is held in a ref so a new inline callback does not resubscribe on

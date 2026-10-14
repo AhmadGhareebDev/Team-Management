@@ -57,10 +57,15 @@ export default function InviteMembersDialog({
     }
 
     startTransition(async () => {
-      const results = await searchUsersByUsername(value, workspaceId)
-      if (latestQueryRef.current === value) {
-        setUsers(results)
+      const result = await searchUsersByUsername(value, workspaceId)
+      if (latestQueryRef.current !== value) {
+        return
       }
+      if (!result.success) {
+        setUsers([])
+        return
+      }
+      setUsers(result.users)
     })
   }
 

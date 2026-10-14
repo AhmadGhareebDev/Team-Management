@@ -1,12 +1,9 @@
 import { Settings, ArrowLeft } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
-import {
-  Card,
-} from "@/components/ui/card"
-import { getUserWorkspaceRole, getWorkspaceById } from "@/db/queries/workspaces"
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
+import { notFound } from "next/navigation"
+import { getWorkspaceById } from "@/db/queries/workspaces"
+import { requireWorkspaceMembership } from "@/lib/guards"
 
 import { CreateProject } from "../_components/CreateProject"
 import InviteUser from "../_components/InviteUser"
@@ -24,19 +21,12 @@ export default async function WorkspaceDetailsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { workspaceId } = await params
-  const session = await auth.api.getSession({ headers: await headers() });
-  const role = session ? await getUserWorkspaceRole(workspaceId, session.user.id) : null;
+  const { role } = await requireWorkspaceMembership(workspaceId);
   const workspace = await getWorkspaceById(workspaceId);
   const resolvedSearchParams = await searchParams;
 
   if (!workspace) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-lg text-muted-foreground">
-          Workspace not found
-        </p>
-      </div>
-    )
+    notFound();
   }
 
   return (

@@ -1,6 +1,6 @@
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { buttonVariants } from "@/components/ui/button"
 import DeleteWorkspace from "../../_components/DeleteWorkspace"
 import {
@@ -13,9 +13,8 @@ import {
 } from "@/components/ui/card"
 import WorkspaceMembersList from "../../_components/WorkspaceMembersList"
 import UpdateWorkspaceInfo from "../../_components/UpdateWorkspaceInfo"
-import { getWorkspaceById, getUserWorkspaceRole } from "@/db/queries/workspaces"
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
+import { getWorkspaceById } from "@/db/queries/workspaces"
+import { requireWorkspaceManager } from "@/lib/guards"
 
 export const instant = false
 
@@ -29,21 +28,12 @@ export default async function WorkspaceSettingsPage({
   const { workspaceId } = await params
   const resolvedSearchParams = await searchParams
 
+  const { role } = await requireWorkspaceManager(workspaceId)
+
   const workspace = await getWorkspaceById(workspaceId)
   if (!workspace) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-lg text-muted-foreground">Workspace not found</p>
-      </div>
-    )
+    notFound()
   }
-
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) {
-    redirect("/auth/login")
-  }
-
-  const role = await getUserWorkspaceRole(workspaceId, session.user.id)
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
