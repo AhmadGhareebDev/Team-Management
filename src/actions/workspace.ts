@@ -8,6 +8,8 @@ import { getTasksAssignedToUserInProjects } from "@/db/queries/task"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { recordActivity, getUserNames } from "@/lib/activity"
+import { publishExistingNotifications } from "@/lib/notifications"
+import { publishWorkspaceInvalidation } from "@/lib/ably-server"
 
 export async function createWorkspace(data: InsertWorkspaceSchemaType) {
 
@@ -210,8 +212,10 @@ export async function inviteUserToWorkspace({workspaceId , inviteeId} : {workspa
             )
 
         if (rearmed.rowCount === 0) {
+            const invitationNotificationId = randomUUID()
+
             await db.insert(notification).values({
-                id: randomUUID(),
+                id: invitationNotificationId,
                 userId: inviteeId,
                 actorId: session.user.id,
                 workspaceId,
@@ -219,6 +223,8 @@ export async function inviteUserToWorkspace({workspaceId , inviteeId} : {workspa
                 type: "workspace_invitation",
                 body: `You have been invited to join a workspace.`,
             })
+
+            await publishExistingNotifications([invitationNotificationId])
         }
         return { success: true }
 
@@ -288,6 +294,8 @@ export async function respondInvitation({ invitationId, action }: { invitationId
                 metadata: { name: session.user.name ?? undefined },
             })
         }
+
+        publishWorkspaceInvalidation(invitation.workspaceId)
 
         return { success: true }
 
@@ -390,6 +398,7 @@ export async function makeMemberAdmin(workspaceId: string, memberId: string): Pr
       metadata: { name: names.get(memberId), from: target.data, to: "admin" },
     })
 
+    publishWorkspaceInvalidation(workspaceId)
     return { success: true }
   } catch (error) {
     return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -434,6 +443,7 @@ export async function makeMemberRegular(workspaceId: string, memberId: string): 
       metadata: { name: names.get(memberId), from: target.data, to: "member" },
     })
 
+    publishWorkspaceInvalidation(workspaceId)
     return { success: true }
   } catch (error) {
     return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -486,6 +496,7 @@ export async function makeMemberOwner(workspaceId: string, memberId: string): Pr
       metadata: { name: names.get(memberId), from: target.data, to: "owner" },
     })
 
+    publishWorkspaceInvalidation(workspaceId)
     return { success: true }
   } catch (error) {
     return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -581,10 +592,15 @@ export async function removeWorkspaceMember(workspaceId: string, memberId: strin
             ? `${memberName} was removed from ${workspaceName}. Tasks now unassigned: ${removedTitles.map((t) => `"${t}"`).join(", ")}.`
             : `${memberName} was removed from ${workspaceName}.`
 
+        const managerNotificationIds: string[] = []
+
         for (const manager of managers) {
           try {
+            const managerNotificationId = randomUUID()
+            managerNotificationIds.push(managerNotificationId)
+
             await db.insert(notification).values({
-              id: randomUUID(),
+              id: managerNotificationId,
               userId: manager.userId,
               actorId: actor.data.actorId,
               workspaceId,
@@ -595,6 +611,8 @@ export async function removeWorkspaceMember(workspaceId: string, memberId: strin
             console.error("Error notifying manager of removed member:", error)
           }
         }
+
+        await publishExistingNotifications(managerNotificationIds)
       }
     } catch (error) {
       console.error("Error notifying managers:", error)
@@ -610,6 +628,8 @@ export async function removeWorkspaceMember(workspaceId: string, memberId: strin
       entityId: memberId,
       metadata: { name: names.get(memberId), from: target.data },
     })
+
+    publishWorkspaceInvalidation(workspaceId)
 
     return { success: true }
   } catch (error) {

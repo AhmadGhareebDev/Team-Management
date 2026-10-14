@@ -4,7 +4,6 @@ import { user } from "@/db/schemas/auth-schema";
 import { project } from "@/db/schemas/project";
 import { taskAssignees } from "@/db/schemas/taskAssignees";
 import { taskDependencies } from "@/db/schemas/taskDependencies";
-import { subtask } from "@/db/schemas/subtasks";
 
 
 export const taskStatusEnum = pgEnum("task_status", [
@@ -55,5 +54,4 @@ export const taskRelations = relations(task, ({ one, many }) => ({
   assignees: many(taskAssignees),
   blockedBy: many(taskDependencies, { relationName: "blocked_task" }),
   blocking: many(taskDependencies, { relationName: "blocking_task" }),
-  subtasks: many(subtask),
 }));

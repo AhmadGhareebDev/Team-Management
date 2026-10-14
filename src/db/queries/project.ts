@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { project, task } from "@/db/schemas";
 import { workspaceMembers } from "@/db/schemas/workspaceMembers";
 import { projectMembers } from "@/db/schemas/projectMembers";
-import { and, asc, desc, eq, exists, lt, ne, notExists, sql } from "drizzle-orm";
+import { and, asc, desc, eq, exists, inArray, lt, ne, notExists, or, sql } from "drizzle-orm";
 import { PAGE_SIZES, type Paginated } from "@/lib/pagination";
 
 export type ProjectSort = "newest" | "nearest_deadline" | "name";
@@ -235,3 +235,46 @@ export type UserProjectItem = Awaited<
     }[];
 };
 export type UserProject = UserProjectItem;
+
+/**
+ * Every project whose canvas this user is allowed to subscribe to. Mirrors the
+ * `canView` rule used by the task actions: workspace owners and admins can open
+ * any project in their workspace, everyone else only projects they belong to.
+ *
+ * A wildcard capability such as `project:*` must never be used here, or any
+ * logged in user could subscribe to a project they have no access to.
+ */
+export async function getAccessibleProjectIds(userId: string) {
+  const rows = await db
+    .selectDistinct({ projectId: project.id })
+    .from(project)
+    .where(
+      or(
+        exists(
+          db
+            .select({ workspaceId: workspaceMembers.workspaceId })
+            .from(workspaceMembers)
+            .where(
+              and(
+                eq(workspaceMembers.workspaceId, project.workspaceId),
+                eq(workspaceMembers.userId, userId),
+                inArray(workspaceMembers.role, ["owner", "admin"])
+              )
+            )
+        ),
+        exists(
+          db
+            .select({ projectId: projectMembers.projectId })
+            .from(projectMembers)
+            .where(
+              and(
+                eq(projectMembers.projectId, project.id),
+                eq(projectMembers.userId, userId)
+              )
+            )
+        )
+      )
+    );
+
+  return rows.map((row) => row.projectId);
+}

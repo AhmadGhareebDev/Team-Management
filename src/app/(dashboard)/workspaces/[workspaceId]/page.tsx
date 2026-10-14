@@ -12,6 +12,7 @@ import { CreateProject } from "../_components/CreateProject"
 import InviteUser from "../_components/InviteUser"
 import ProjectList from "../_components/ProjectsList"
 import WorkspaceMembersList from "../_components/WorkspaceMembersList"
+import { WorkspaceRealtimeBridge } from "@/components/web/WorkspaceRealtimeBridge"
 
 export const instant = false;
 
@@ -40,6 +41,7 @@ export default async function WorkspaceDetailsPage({
 
   return (
     <div className="space-y-6 pt-2">
+      <WorkspaceRealtimeBridge workspaceId={workspaceId} />
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link href="/workspaces" className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>

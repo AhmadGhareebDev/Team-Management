@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { AlertCircle, Calendar, ListCheck } from "lucide-react"
+import { AlertCircle, Calendar } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar"
@@ -27,9 +27,6 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
 
   const overdue = task.dueDate && new Date(task.dueDate) < new Date() && !isDone
   const dueSoon = !overdue && isDueSoon(task.dueDate, task.status)
-
-  const doneSubtasks = task.subtasks.filter((s) => s.isDone).length
-  const hasSubtasks = task.subtasks.length > 0
 
   const shownAssignees = task.assignees.slice(0, MAX_AVATARS)
   const hiddenAssigneeCount = task.assignees.length - shownAssignees.length
@@ -117,15 +114,6 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
           )}
 
           <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3">
-            {hasSubtasks ? (
-              <span className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
-                <ListCheck className="size-3.5" />
-                {doneSubtasks}/{task.subtasks.length}
-              </span>
-            ) : (
-              <span />
-            )}
-
             {task.assignees.length > 0 && (
               <div className="flex items-center gap-1">
                 <AvatarGroup>

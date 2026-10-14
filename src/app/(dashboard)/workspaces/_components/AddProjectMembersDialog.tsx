@@ -41,6 +41,16 @@ export default function AddProjectMembersDialog({
   const currentUserId = session?.user.id
   const memberIds = new Set(projectMemberIds)
   const [pending, setPending] = useState<PendingAction>(null)
+  // Membership arrives from the server, but router.refresh() lands a beat after
+  // the action resolves. Without this the button flips back to "Add" and only
+  // changes to "Remove" once the refreshed props arrive.
+  // Held only for this dialog's lifetime, which is why ProjectCard mounts it
+  // conditionally: reopening gives a clean slate instead of carrying stale
+  // membership into the next visit.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
+
+  const isInProject = (userId: string) =>
+    overrides[userId] ?? memberIds.has(userId)
   const [removeTarget, setRemoveTarget] = useState<WorkspaceMemberWithUser | null>(null)
   const [isRemovePending, startRemoveTransition] = useTransition()
 
@@ -68,6 +78,7 @@ export default function AddProjectMembersDialog({
         return
       }
 
+      setOverrides((prev) => ({ ...prev, [userId]: true }))
       toast.add({ type: "success", description: "Member added to the project." })
       router.refresh()
     } finally {
@@ -98,6 +109,7 @@ export default function AddProjectMembersDialog({
       }
 
       setRemoveTarget(null)
+      setOverrides((prev) => ({ ...prev, [userId]: false }))
       toast.add({ type: "success", description: "Member removed from the project." })
       router.refresh()
     })
@@ -130,7 +142,7 @@ export default function AddProjectMembersDialog({
         ) : (
           <ul className="divide-y divide-border">
             {members.map((member) => {
-              const isInProject = memberIds.has(member.user.id)
+              const inProject = isInProject(member.user.id)
               const isAdding = isPendingFor("add", member.user.id)
               const isRemoving = isPendingFor("remove", member.user.id)
               const displayName =
@@ -161,7 +173,7 @@ export default function AddProjectMembersDialog({
                         @{member.user.username}
                       </p>
                     </div>
-                    {isInProject ? (
+                    {inProject ? (
                       <Button
                         variant="outline"
                         size="sm"

@@ -49,12 +49,6 @@ function describeActivity(item: RecentActivity) {
       return `made ${target} depend on ${quote(meta.name, "another task")}`
     case "dependency_removed":
       return `removed a dependency from ${target}`
-    case "subtask_added":
-      return `added the subtask ${target}`
-    case "subtask_completed":
-      return `completed the subtask ${target}`
-    case "subtask_deleted":
-      return `deleted the subtask ${target}`
     case "project_created":
       return `created the project ${quote(meta.title, "a project")}`
     case "project_updated":

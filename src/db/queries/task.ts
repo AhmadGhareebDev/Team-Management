@@ -18,6 +18,7 @@ export async function getProjectTasks(projectId: string) {
             dueDate: true,
             positionX: true,
             positionY: true,
+            updatedAt: true,
         },
         with: {
             assignees: {
@@ -34,12 +35,6 @@ export async function getProjectTasks(projectId: string) {
                     dependsOn: {
                         columns: { id: true, title: true, status: true, dueDate: true },
                     },
-                },
-            },
-            subtasks: {
-                columns: { id: true, title: true, isDone: true, createdAt: true },
-                with: {
-                    createdBy: { columns: { id: true } },
                 },
             },
         },
@@ -250,9 +245,6 @@ export async function getUserAssignedTasks(
                         }
                     }
                 },
-                subtasks: {
-                    columns: { id: true, isDone: true },
-                }
             },
         }),
         db
@@ -274,7 +266,6 @@ export type UserAssignedTaskItem = Awaited<
     };
     assignees: { user: { id: string; name: string; username: string | null; avatar_url: string | null } }[];
     blockedBy: { id: string; dependsOn: { id: string; title: string; status: TaskStatus } }[];
-    subtasks: { id: string; isDone: boolean }[];
 };
 export type UserAssignedTask = UserAssignedTaskItem;
 
@@ -332,12 +323,6 @@ export async function getProjectDashboardTasks(
                     dependsOn: {
                         columns: { id: true, title: true, status: true, dueDate: true },
                     },
-                },
-            },
-            subtasks: {
-                columns: { id: true, title: true, isDone: true, createdAt: true },
-                with: {
-                    createdBy: { columns: { id: true } },
                 },
             },
         },

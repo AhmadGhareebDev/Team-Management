@@ -53,6 +53,7 @@ export default async function DashboardLayout({
 
   return (
     <NotificationsProvider
+      userId={session?.user.id ?? null}
       initialTab={initialTab}
       notifications={notifications}
       total={notificationTotal}

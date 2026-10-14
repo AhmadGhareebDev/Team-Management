@@ -37,6 +37,7 @@ export function NotificationsDropdown() {
     loadMore,
     markRead,
     markAllRead,
+    resolveInvitation,
   } = useNotifications()
 
   return (
@@ -98,6 +99,7 @@ export function NotificationsDropdown() {
                       isRead: isLocallyRead(notification),
                     }}
                     onRead={markRead}
+                    onInvitationResolved={resolveInvitation}
                   />
                 </li>
               ))}

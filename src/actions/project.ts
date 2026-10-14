@@ -8,6 +8,8 @@ import { getTasksAssignedToUserInProject } from "@/db/queries/task"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { recordActivity, getUserNames } from "@/lib/activity"
+import { publishWorkspaceInvalidation } from "@/lib/ably-server"
+import { publishExistingNotifications } from "@/lib/notifications"
 
 export async function createProject(workspaceId: string, data: InsertProjectSchemaType) {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -64,6 +66,8 @@ export async function createProject(workspaceId: string, data: InsertProjectSche
             entityId: projectId,
             metadata: { title: parsedData.data.name },
         })
+
+        publishWorkspaceInvalidation(workspaceId)
 
         return { success: true, projectId }
     } catch (error) {
@@ -146,8 +150,10 @@ export async function addProjectMember({
         // The added member should find out straight away. A notification
         // failure must never undo the membership itself.
         try {
+            const addedMemberNotificationId = randomUUID()
+
             await db.insert(notification).values({
-                id: randomUUID(),
+                id: addedMemberNotificationId,
                 userId,
                 actorId: session.user.id,
                 workspaceId,
@@ -155,6 +161,8 @@ export async function addProjectMember({
                 type: "project_member_added",
                 body: `${session.user.name ?? "Someone"} added you to the project "${projectBelongsToWorkspace.name}".`,
             })
+
+            await publishExistingNotifications([addedMemberNotificationId])
         } catch (error) {
             console.error("Error notifying added project member:", error)
         }
@@ -174,6 +182,7 @@ export async function addProjectMember({
             },
         })
 
+        publishWorkspaceInvalidation(workspaceId)
         return { success: true }
     } catch {
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -229,6 +238,7 @@ export async function deleteProject({workspaceId, projectId}: {workspaceId: stri
                 metadata: { title: projectBelongToWorkspace.name },
             })
 
+            publishWorkspaceInvalidation(workspaceId)
             return { success: true }
 
         } catch (error) {
@@ -297,6 +307,7 @@ export async function editProjectInfo({workspaceId, projectId, data}: {workspace
             metadata: { title: parsedData.data.name },
         })
 
+        publishWorkspaceInvalidation(workspaceId)
         return { success: true }
 
     } catch (error) {
@@ -425,8 +436,10 @@ export async function removeProjectMember({ workspaceId, projectId, userId }: { 
                 await db.insert(notification).values(groupRows)
             }
 
+            const removedMemberNotificationId = randomUUID()
+
             await db.insert(notification).values({
-                id: randomUUID(),
+                id: removedMemberNotificationId,
                 userId,
                 actorId: session.user.id,
                 workspaceId,
@@ -434,6 +447,11 @@ export async function removeProjectMember({ workspaceId, projectId, userId }: { 
                 type: "member_removed",
                 body: `${actorName} removed you from the project "${projectName}".${taskList}`,
             })
+
+            await publishExistingNotifications([
+                ...groupRows.map((row) => row.id),
+                removedMemberNotificationId,
+            ])
         } catch (error) {
             console.error("Error notifying removed project member:", error)
         }
@@ -448,6 +466,7 @@ export async function removeProjectMember({ workspaceId, projectId, userId }: { 
             metadata: { name: removedName, title: projectName },
         })
 
+        publishWorkspaceInvalidation(workspaceId)
         return { success: true }
 
     } catch (error) {

@@ -327,6 +327,7 @@ export default function ProjectCard({
           )}
         </Modal>
 
+        {addMembersOpen && (
         <AddProjectMembersDialog
           open={addMembersOpen}
           onOpenChange={setAddMembersOpen}
@@ -335,6 +336,7 @@ export default function ProjectCard({
           members={members}
           projectMemberIds={projectMemberIds}
         />
+        )}
       </div>
     </Card>
   )

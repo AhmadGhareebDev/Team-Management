@@ -1,27 +1,15 @@
 import { db } from "@/db";
 import { notification } from "@/db/schemas";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import {
+    NOTIFICATION_TAB_TYPES,
+    type NotificationTab as LibNotificationTab,
+} from "@/lib/notification-tabs";
 
-type NotificationTypeName = (typeof notification.$inferSelect)["type"];
 
-export type NotificationTab = "invitations" | "tasks" | "members";
+export type NotificationTab = LibNotificationTab;
 
-export const NOTIFICATION_TAB_TYPES: Record<
-    NotificationTab,
-    readonly NotificationTypeName[]
-> = {
-    invitations: ["workspace_invitation"],
-    tasks: [
-        "task_assigned",
-        "task_unblocked",
-        "dependency_overdue",
-        "dependency_resolved",
-        "deadline_approaching",
-        "task_reassigned",
-        "task_overdue",
-    ],
-    members: ["member_removed", "project_member_added"],
-};
+export { NOTIFICATION_TAB_TYPES };
 
 function tabCondition(tab: NotificationTab) {
     return inArray(notification.type, NOTIFICATION_TAB_TYPES[tab]);

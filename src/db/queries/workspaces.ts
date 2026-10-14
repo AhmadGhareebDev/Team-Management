@@ -404,3 +404,13 @@ export async function getWorkspaceMembersForWorkspaces(workspaceIds: string[]) {
 export type WorkspaceMembersBatch = Awaited<
     ReturnType<typeof getWorkspaceMembersForWorkspaces>
 >[number];
+
+/** Workspaces whose member list this user is allowed to watch. */
+export async function getAccessibleWorkspaceIds(userId: string) {
+    const rows = await db
+        .selectDistinct({ workspaceId: workspaceMembers.workspaceId })
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.userId, userId));
+
+    return rows.map((row) => row.workspaceId);
+}

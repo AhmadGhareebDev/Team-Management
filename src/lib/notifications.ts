@@ -10,6 +10,8 @@ import {
   project,
 } from "@/db/schemas"
 import { and, eq, inArray, ne } from "drizzle-orm"
+import { publishNotification } from "@/lib/ably-server"
+import type { NotificationPayload } from "@/lib/ably-channel"
 
 export type NotificationTypeName = (typeof notification.$inferInsert)["type"]
 
@@ -21,6 +23,7 @@ export async function createNotification({
   taskId = null,
   type,
   body,
+  publish = true,
 }: {
   userId: string
   actorId?: string | null
@@ -29,15 +32,18 @@ export async function createNotification({
   taskId?: string | null
   type: NotificationTypeName
   body: string
+  publish?: boolean
 }) {
+  const id = randomUUID()
+
   // notification_user_task_type_uidx makes the dedupe a database guarantee, so
   // two concurrent after() callbacks racing on the same (user, task, type)
   // result in one row instead of a unique-violation error. The application-level
   // hasNotified() check still saves the round trip in the common case.
-  await db
+  const inserted = await db
     .insert(notification)
     .values({
-      id: randomUUID(),
+      id,
       userId,
       actorId: actorId ?? null,
       workspaceId: workspaceId ?? null,
@@ -48,6 +54,53 @@ export async function createNotification({
       isRead: false,
     })
     .onConflictDoNothing()
+    .returning({ id: notification.id })
+
+  if (!publish || inserted.length === 0) return
+
+  await publishNotification(userId, await buildPayload(id))
+}
+
+async function buildPayload(id: string): Promise<NotificationPayload> {
+  const row = await db.query.notification.findFirst({
+    where: eq(notification.id, id),
+    with: {
+      actor: {
+        columns: { id: true, name: true, avatar_url: true },
+      },
+      workspace: {
+        columns: { id: true, name: true },
+      },
+      project: {
+        columns: { id: true, workspaceId: true },
+      },
+      workspaceInvitation: {
+        columns: { id: true, status: true },
+      },
+    },
+  })
+
+  if (!row) {
+    throw new Error("Notification disappeared before publish")
+  }
+
+  return {
+    ...row,
+    createdAt: row.createdAt.toISOString(),
+  }
+}
+
+export async function publishExistingNotifications(ids: string[]) {
+  if (ids.length === 0) return
+
+  for (const id of ids) {
+    try {
+      const payload = await buildPayload(id)
+      await publishNotification(payload.userId, payload)
+    } catch (error) {
+      console.error("Error publishing notification:", error)
+    }
+  }
 }
 
 export async function hasNotified({
@@ -219,6 +272,7 @@ export async function runNotificationsScan(userId: string) {
           taskId,
           type,
           body,
+          publish: false,
         })
       })
     }
@@ -247,6 +301,7 @@ export async function runNotificationsScan(userId: string) {
           taskId,
           type,
           body,
+          publish: false,
         })
       })
     }

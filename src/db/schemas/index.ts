@@ -8,6 +8,5 @@ export { projectMembers, projectMembersRelations } from "@/db/schemas/projectMem
 export { task, taskStatusEnum, taskPriorityEnum, taskRelations } from "@/db/schemas/task"
 export { taskAssignees, taskAssigneesRelations } from "@/db/schemas/taskAssignees"
 export { taskDependencies, taskDependenciesRelations } from "@/db/schemas/taskDependencies"
-export { subtask, subtaskRelations } from "@/db/schemas/subtasks"
 export { notification, notificationTypeEnum, notificationRelations } from "@/db/schemas/notification"
 export { activity, activityTypeEnum, activityRelations, type ActivityMetadata } from "@/db/schemas/activity"

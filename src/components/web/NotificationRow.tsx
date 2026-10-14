@@ -54,9 +54,11 @@ function initials(name: string) {
 export default function NotificationRow({
   notification,
   onRead,
+  onInvitationResolved,
 }: {
   notification: Notification
   onRead?: (id: string) => void
+  onInvitationResolved?: (id: string, status: "accepted" | "declined") => void
 }) {
   const router = useRouter()
   const [action, setAction] = React.useState<"accepted" | "declined" | null>(null)
@@ -113,8 +115,10 @@ export default function NotificationRow({
       }
 
       if (result.success) {
-        // The row stays in the list; the refreshed status swaps the buttons
-        // for an "accepted"/"declined" label.
+        // The row stays in the list. Patching it directly swaps the buttons for
+        // the outcome label immediately; router.refresh() alone cannot, because
+        // the row is rendered from client state that a refresh preserves.
+        onInvitationResolved?.(notification.id, choice)
         router.refresh()
         toast.add({
           type: "success",

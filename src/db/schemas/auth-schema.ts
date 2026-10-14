@@ -2,7 +2,6 @@ import { relations } from "drizzle-orm";
 import { notification } from "@/db/schemas/notification";
 import { projectMembers } from "@/db/schemas/projectMembers";
 import { workspaceMembers } from "@/db/schemas/workspaceMembers";
-import { subtask } from "@/db/schemas/subtasks";
 import { workspaceInvitation } from "@/db/schemas/workspaceInvitation";
 import {
   pgTable,
@@ -95,7 +94,6 @@ export const userRelations = relations(user, ({ many }) => ({
   notificationsActedOn: many(notification, { relationName: "actor" }),
   workspaces: many(workspaceMembers),
   projects: many(projectMembers),
-  subtasks: many(subtask),
   workspaceInvitationsSent: many(workspaceInvitation, { relationName: "inviter" }),
   workspaceInvitationsReceived: many(workspaceInvitation, { relationName: "invitee" }),
 }));

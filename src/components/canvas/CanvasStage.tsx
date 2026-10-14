@@ -22,6 +22,16 @@ import {
 import "@xyflow/react/dist/style.css"
 import { ArrowLeft, ChevronDown, ChevronUp, LayoutDashboard, Plus } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
+import { useProjectRealtime } from "@/components/canvas/useProjectRealtime"
+import {
+  buildEdges,
+  buildNodes,
+  mergeCanvasEdges,
+  mergeCanvasNodes,
+  removeDeleted,
+} from "@/components/canvas/canvas-graph"
+import { toProjectTask } from "@/lib/canvas-payload"
+import type { CanvasEvent } from "@/lib/ably-channel"
 import { toast } from "@/components/ui/toast"
 import { Input } from "@/components/ui/input"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -36,14 +46,13 @@ import {
   removeTaskDependency,
   deleteTask,
 } from "@/actions/task"
-import { addSubtask, toggleSubtask, deleteSubtask } from "@/actions/subtask"
 import { insertTaskSchema, type InsertTaskSchemaType, type UpdateTaskSchemaType } from "@/db/validations"
 import { actionErrorMessages } from "@/lib/error-messages"
 import type { ProjectTask } from "@/db/queries/task"
 import type { ProjectWithMembers } from "@/db/queries/project"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
 import Link from "next/link"
-import TaskNode, { type TaskNodeType, type TaskNodeData, type OptimisticApi } from "@/components/canvas/TaskNode"
+import TaskNode, { type TaskNodeData, type OptimisticApi } from "@/components/canvas/TaskNode"
 import TaskDetailsPanel from "@/components/canvas/TaskDetailsPanel"
 import { AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
@@ -52,38 +61,6 @@ const MAX_MEMBERS = 4
 
 const getInitials = (name: string) =>
   name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
-
-const buildNodes = (
-  projectTasks: ProjectTask[],
-  projectId: string,
-  currentUserId: string | null,
-  isManager: boolean
-): TaskNodeType[] =>
-  projectTasks.map((t) => ({
-    id: t.id,
-    type: "task",
-    position: { x: t.positionX, y: t.positionY },
-    data: { task: t, projectId, currentUserId, isManager },
-  }))
-
-const buildEdges = (projectTasks: ProjectTask[]): Edge[] =>
-  projectTasks.flatMap((t) =>
-    t.blockedBy.map((dep) => ({
-      id: `dep-${dep.id}`,
-      source: dep.dependsOn.id,
-      target: t.id,
-      type: "smoothstep",
-      animated: true,
-      markerEnd: { type: MarkerType.ArrowClosed, color: "var(--primary)", width: 16, height: 16 },
-      style: {
-        stroke: "var(--primary)",
-        strokeWidth: 2,
-        strokeDasharray: "6 6",
-        animation: "dashdraw 0.8s linear infinite",
-        filter: "url(#edge-glow)",
-      },
-    }))
-  )
 
 const canvasErrorMessages: Record<string, string> = {
   UNAUTHENTICATED: "You must be logged in.",
@@ -97,7 +74,6 @@ const canvasErrorMessages: Record<string, string> = {
   DEPENDENCY_NOT_FOUND: "Dependency not found.",
   BLOCKED_DEPENDENCY: "Some dependencies aren't done yet.",
   INVALID_ASSIGNEE: "One of the selected members isn't in this project.",
-  SUBTASK_NOT_FOUND: "Subtask not found.",
   INTERNAL_SERVER_ERROR: actionErrorMessages.INTERNAL_SERVER_ERROR,
 }
 
@@ -308,56 +284,6 @@ export default function CanvasStage({
     })
   }
 
-  const handleAddSubtask = async (taskId: string, title: string): Promise<boolean> => {
-    const result = await addSubtask({ projectId, taskId, data: { title } })
-
-    if (result?.error) {
-      toast.add({ type: "error", description: canvasErrorMessages[result.error] ?? "Failed to add subtask." })
-      return false
-    }
-    router.refresh()
-    return true
-  }
-
-  const handleToggleSubtask = (taskId: string, subtaskId: string) => {
-    const baseTask = tasks.find((t) => t.id === taskId)
-    if (!baseTask) return
-    const prevSubtasks = displayedTaskData[taskId]?.subtasks ?? baseTask.subtasks
-
-    patchTask(taskId, {
-      subtasks: prevSubtasks.map((s) => (s.id === subtaskId ? { ...s, isDone: !s.isDone } : s)),
-    })
-
-    startEdgeTransition(async () => {
-      const result = await toggleSubtask({ projectId, taskId, subtaskId })
-      if (result?.error) {
-        patchTask(taskId, { subtasks: prevSubtasks })
-        toast.add({ type: "error", description: canvasErrorMessages[result.error] ?? "Failed to toggle subtask." })
-        return
-      }
-      router.refresh()
-    })
-  }
-
-  const handleDeleteSubtask = (taskId: string, subtaskId: string) => {
-    const baseTask = tasks.find((t) => t.id === taskId)
-    if (!baseTask) return
-    const prevSubtasks = displayedTaskData[taskId]?.subtasks ?? baseTask.subtasks
-
-    patchTask(taskId, { subtasks: prevSubtasks.filter((s) => s.id !== subtaskId) })
-
-    startEdgeTransition(async () => {
-      const result = await deleteSubtask({ projectId, taskId, subtaskId })
-      if (result?.error) {
-        patchTask(taskId, { subtasks: prevSubtasks })
-        toast.add({ type: "error", description: canvasErrorMessages[result.error] ?? "Failed to delete subtask." })
-        return
-      }
-      toast.add({ type: "success", description: "Subtask deleted." })
-      router.refresh()
-    })
-  }
-
   const handleDeleteTaskOptimistic = (taskId: string) => {
     const snapshotNodes = nodes
     const snapshotEdges = edges
@@ -395,9 +321,6 @@ export default function CanvasStage({
     toggleTaskStatus: handleToggleTaskStatus,
     updateTaskDetails: handleUpdateTaskDetails,
     setAssignees: handleSetAssignees,
-    addSubtask: handleAddSubtask,
-    toggleSubtask: handleToggleSubtask,
-    deleteSubtask: handleDeleteSubtask,
     deleteTask: handleDeleteTaskOptimistic,
   }
 
@@ -411,6 +334,50 @@ export default function CanvasStage({
     if (current.optimistic === optimisticApi) return n
     return { ...n, data: { ...current, optimistic: optimisticApi } }
   })
+
+  // Tracks the newest updatedAt applied per task so a message that was already
+  // superseded by a router.refresh() does not roll the node backwards.
+  const appliedAtRef = useRef<Map<string, number>>(new Map())
+
+  const handleCanvasEvent = (event: CanvasEvent) => {
+    if (event.kind === "delete") {
+      setRemovedTaskIds((prev) => {
+        const next = new Set(prev)
+        let changed = false
+        for (const id of event.taskIds) {
+          if (!next.has(id)) {
+            next.add(id)
+            changed = true
+          }
+          appliedAtRef.current.delete(id)
+        }
+        return changed ? next : prev
+      })
+      const remaining = removeDeleted(nodes, edges, event.taskIds)
+      setNodes(remaining.nodes)
+      setEdges(remaining.edges)
+      return
+    }
+
+    const incoming: ProjectTask[] = []
+    for (const payload of event.tasks) {
+      const seen = appliedAtRef.current.get(payload.id) ?? 0
+      if (new Date(payload.updatedAt).getTime() <= seen) continue
+      appliedAtRef.current.set(payload.id, new Date(payload.updatedAt).getTime())
+      incoming.push(toProjectTask(payload))
+    }
+
+    if (incoming.length === 0) return
+
+    for (const remote of incoming) {
+      patchTask(remote.id, remote)
+    }
+
+    setNodes((prev) => mergeCanvasNodes(prev, incoming, projectId, currentUserId, isManager))
+    setEdges((prev) => mergeCanvasEdges(prev, incoming))
+  }
+
+  const realtimeElements = useProjectRealtime(projectId, handleCanvasEvent)
 
   const dragStartPositions = useRef<Record<string, { x: number; y: number }>>({})
   const positionSaveTimers = useRef<Map<string, { timer: ReturnType<typeof setTimeout>; position: { x: number; y: number } }>>(new Map())
@@ -470,14 +437,10 @@ export default function CanvasStage({
       source: connection.source,
       target: connection.target,
       type: "smoothstep",
-      animated: true,
       markerEnd: { type: MarkerType.ArrowClosed, color: "var(--primary)" },
       style: {
         stroke: "var(--primary)",
         strokeWidth: 2,
-        strokeDasharray: "6 6",
-        animation: "dashdraw 0.8s linear infinite",
-        filter: "url(#edge-glow)",
       },
     }
     setEdges((prev) => [...prev, optimisticEdge])
@@ -577,11 +540,8 @@ export default function CanvasStage({
 
   return (
     <div className="relative h-full w-full bg-background select-none cursor-default overflow-hidden">
+      {realtimeElements}
       <style>{`
-        @keyframes dashdraw {
-          from { stroke-dashoffset: 24; }
-          to { stroke-dashoffset: 0; }
-        }
         .react-flow__pane {
           cursor: grab !important;
         }
@@ -597,7 +557,7 @@ export default function CanvasStage({
         }`}
       >
         <div className="flex justify-center px-4 pt-4 pointer-events-none">
-          <div className="relative pointer-events-auto flex w-full max-w-3xl items-center gap-3 rounded-full border border-border/80 bg-card/85 px-4 py-2 shadow-xl backdrop-blur-md transition-all">
+          <div className="relative pointer-events-auto flex w-full max-w-3xl items-center gap-3 rounded-full border-0 bg-card px-4 py-2 transition-colors">
             <Link
               href={`/workspaces/${workspaceId}`}
               className={buttonVariants({ variant: "ghost", size: "icon-sm", className: "rounded-full hover:bg-accent text-muted-foreground hover:text-foreground shrink-0" })}
@@ -647,7 +607,7 @@ export default function CanvasStage({
                   )}
                 </AvatarGroup>
 
-                <div className="invisible absolute top-full right-0 z-30 mt-3 min-w-56 rounded-xl border border-border bg-popover/95 p-2 opacity-0 shadow-xl backdrop-blur-md transition-all duration-150 group-hover/members:visible group-hover/members:opacity-100">
+                <div className="invisible absolute top-full right-0 z-30 mt-3 min-w-56 rounded-xl border-0 bg-popover p-2 opacity-0 transition-opacity group-hover/members:visible group-hover/members:opacity-100">
                   <p className="px-2 pt-1 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                     {project.members.length} {project.members.length === 1 ? "member" : "members"}
                   </p>
@@ -706,7 +666,7 @@ export default function CanvasStage({
               type="button"
               onClick={() => setIsBarVisible(false)}
               title="Hide Bar"
-              className="absolute -top-3 left-1/2 -translate-x-1/2 flex size-6 items-center justify-center rounded-full border border-border/80 bg-card/90 shadow-md backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all pointer-events-auto"
+              className="absolute -top-3 left-1/2 -translate-x-1/2 flex size-6 items-center justify-center rounded-full border-0 bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors pointer-events-auto"
             >
               <ChevronUp className="size-3.5" />
             </button>
@@ -720,7 +680,7 @@ export default function CanvasStage({
           type="button"
           onClick={() => setIsBarVisible(true)}
           title="Show Bar"
-          className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex h-6 w-10 items-center justify-center rounded-b-xl border border-t-0 border-border/80 bg-card/90 shadow-lg backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+          className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex h-6 w-10 items-center justify-center rounded-b-xl border-0 bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         >
           <ChevronDown className="size-4" />
         </button>
@@ -746,15 +706,8 @@ export default function CanvasStage({
         proOptions={{ hideAttribution: true }}
         nodesDraggable={isManager}
         nodesConnectable={isManager}
+        onlyRenderVisibleElements
       >
-        <svg className="absolute size-0">
-          <defs>
-            <filter id="edge-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="var(--primary)" floodOpacity="0.7" />
-            </filter>
-          </defs>
-        </svg>
-
         <Background 
           variant={BackgroundVariant.Dots} 
           gap={24} 
@@ -762,7 +715,7 @@ export default function CanvasStage({
           color="currentColor" 
           className="text-slate-400 dark:text-slate-600 opacity-60" 
         />
-        <Controls className="!rounded-lg !border-border/60 bg-card/80! !shadow-md backdrop-blur-md overflow-hidden" />
+        <Controls className="!rounded-lg !border-0 bg-card overflow-hidden" />
         <FocusOnTask taskId={initialTaskId} />
       </ReactFlow>
 

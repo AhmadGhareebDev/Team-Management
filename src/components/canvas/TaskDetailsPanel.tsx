@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Calendar, Check, Trash2, X, AlertCircle, Clock } from "lucide-react"
+import { Calendar, Check, Trash2, X, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -137,9 +137,9 @@ export default function TaskDetailsPanel({
   if (!open) return null
 
   return (
-    <aside className="absolute top-0 right-0 z-40 flex h-full w-80 flex-col border-l border-border/60 bg-card/95 shadow-2xl backdrop-blur-md transition-all duration-200 animate-in slide-in-from-right-4">
+    <aside className="absolute top-0 right-0 z-40 flex h-full w-80 flex-col border-0 bg-card">
       {/* Header */}
-      <div className="shrink-0 flex items-center justify-between border-b border-border/50 bg-muted/30 px-4 py-3">
+      <div className="shrink-0 flex items-center justify-between border-0 border-b border-border/50 bg-muted/30 px-4 py-3">
         <div className="min-w-0 flex-1 pr-2">
           <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Task Details</p>
           <p className="truncate text-sm font-semibold text-foreground leading-snug">{task.title}</p>
@@ -160,12 +160,12 @@ export default function TaskDetailsPanel({
         {/* Status Section */}
         <div className="space-y-2">
           <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Status</p>
-          <div className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-muted/20 p-2.5">
+          <div className="flex items-center justify-between gap-2 rounded-lg border-0 bg-muted/20 p-2.5">
             {canPickStatus ? (
               <Select value={task.status} onValueChange={handleStatusChange}>
                 <SelectTrigger
                   aria-label="Change task status"
-                  className="h-7! rounded-md border border-border/60 bg-background px-2 text-xs font-normal normal-case tracking-normal"
+                  className="h-7! rounded-md border-0 bg-background px-2 text-xs font-normal normal-case tracking-normal"
                 >
                   <SelectValue>
                     {(value) => {
@@ -219,7 +219,7 @@ export default function TaskDetailsPanel({
 
           {/* Blocked Alerts */}
           {overdueBlockers.length > 0 && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+            <div className="flex items-center gap-2 rounded-lg border-0 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
               <Clock className="size-3.5 shrink-0" />
               <span className="leading-tight">
                 Dependency overdue: {overdueBlockers.map((d) => d.dependsOn.title).join(", ")}
@@ -268,7 +268,7 @@ export default function TaskDetailsPanel({
                   disabled={!isManager}
                   onClick={() => detailsForm.setValue("priority", priority.value, { shouldDirty: true, shouldValidate: true })}
                   className={cn(
-                    "rounded-md border px-2.5 py-1 text-[11px] font-semibold capitalize transition-all",
+                    "rounded-md border-0 px-2.5 py-1 text-[11px] font-semibold capitalize transition-colors",
                     active 
                       ? "border-primary bg-primary text-primary-foreground shadow-xs" 
                       : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -355,7 +355,7 @@ export default function TaskDetailsPanel({
             ) : (
               <div className="flex flex-col gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
                 <p className="text-xs text-destructive font-medium leading-normal">
-                  Permanently delete this task and all its subtasks?
+                  
                 </p>
                 <div className="flex gap-2 pt-1">
                   <Button variant="destructive" size="sm" className="flex-1 h-7 text-xs" onClick={handleDelete}>

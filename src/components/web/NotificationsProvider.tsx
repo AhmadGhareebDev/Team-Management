@@ -3,6 +3,8 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
+import Ably from "ably"
+import { AblyProvider, ChannelProvider, useChannel } from "ably/react"
 
 import { toast } from "@/components/ui/toast"
 import {
@@ -10,7 +12,13 @@ import {
   loadNotificationTabCounts,
 } from "@/actions/notifications-loader"
 import { markAllNotificationsAsRead } from "@/actions/notifications"
-import type { Notification, NotificationTab } from "@/db/queries/notifications"
+import type { Notification } from "@/db/queries/notifications"
+import {
+  NOTIFICATION_TAB_TYPES,
+  type NotificationTab,
+} from "@/lib/notification-tabs"
+import { notificationChannel, type NotificationPayload } from "@/lib/ably-channel"
+import { getRealtimeClient } from "@/lib/ably-client"
 import { PAGE_SIZES } from "@/lib/pagination"
 import { resolveActionError } from "@/lib/error-messages"
 
@@ -29,6 +37,7 @@ type NotificationsContextValue = {
   loadMore: () => void
   markRead: (id: string) => void
   markAllRead: () => void
+  resolveInvitation: (id: string, status: "accepted" | "declined") => void
 }
 
 // The public layout renders the Navbar without a provider, because it has no
@@ -49,6 +58,7 @@ const INERT: NotificationsContextValue = {
   loadMore: () => {},
   markRead: () => {},
   markAllRead: () => {},
+  resolveInvitation: () => {},
 }
 
 const NotificationsContext =
@@ -58,7 +68,57 @@ export function useNotifications() {
   return React.useContext(NotificationsContext)
 }
 
+function toNotification(payload: NotificationPayload): Notification {
+  return {
+    ...payload,
+    createdAt: new Date(payload.createdAt),
+    workspaceInvitation: payload.workspaceInvitation
+      ? { ...payload.workspaceInvitation }
+      : null,
+  }
+}
+
+function LiveListener({
+  channelName,
+  onMessage,
+}: {
+  channelName: string
+  onMessage: (payload: NotificationPayload) => void
+}) {
+  const handler = React.useCallback(
+    (message: Ably.Message) => onMessage(message.data as NotificationPayload),
+    [onMessage]
+  )
+
+  useChannel(channelName, "new", handler)
+
+  return null
+}
+
+function RealtimeBridge({
+  userId,
+  onMessage,
+}: {
+  userId: string
+  onMessage: (payload: NotificationPayload) => void
+}) {
+  const client = getRealtimeClient()
+
+  if (!client) return null
+
+  const channelName = notificationChannel(userId)
+
+  return (
+    <AblyProvider client={client}>
+      <ChannelProvider channelName={channelName}>
+        <LiveListener channelName={channelName} onMessage={onMessage} />
+      </ChannelProvider>
+    </AblyProvider>
+  )
+}
+
 export function NotificationsProvider({
+  userId,
   initialTab,
   notifications,
   total,
@@ -66,6 +126,7 @@ export function NotificationsProvider({
   unreadTotal,
   children,
 }: {
+  userId: string | null
   initialTab: NotificationTab
   notifications: Notification[]
   total: number
@@ -167,6 +228,25 @@ export function NotificationsProvider({
     })
   }, [activeTab, items.length])
 
+  // An invitation row is rendered from this provider's client state, which a
+  // router.refresh() deliberately preserves. The server action succeeding is
+  // not enough on its own, so the row is patched here.
+  const resolveInvitation = React.useCallback(
+    (id: string, status: "accepted" | "declined") => {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id && item.workspaceInvitation
+            ? {
+                ...item,
+                workspaceInvitation: { ...item.workspaceInvitation, status },
+              }
+            : item
+        )
+      )
+    },
+    []
+  )
+
   const markAllRead = React.useCallback(() => {
     startMarkAllTransition(async () => {
       const result = await markAllNotificationsAsRead()
@@ -192,6 +272,34 @@ export function NotificationsProvider({
     })
   }, [items, router])
 
+  const handleLiveMessage = React.useCallback(
+    (payload: NotificationPayload) => {
+      const incoming = toNotification(payload)
+
+      const tab = (Object.keys(NOTIFICATION_TAB_TYPES) as NotificationTab[]).find(
+        (key) => NOTIFICATION_TAB_TYPES[key].includes(incoming.type)
+      )
+
+      if (tab) {
+        setTabCounts((prev) => ({ ...prev, [tab]: prev[tab] + 1 }))
+      }
+
+      // Only fold it into the visible list when it belongs to the tab on
+      // screen, otherwise it would render under the wrong heading.
+      if (tab === activeTab) {
+        setItems((prev) =>
+          prev.some((item) => item.id === incoming.id) ? prev : [incoming, ...prev]
+        )
+        setItemTotal((total) => total + 1)
+      }
+
+      setUnreadCount((count) => count + 1)
+
+      toast.add({ type: "info", description: incoming.body })
+    },
+    [activeTab]
+  )
+
   const value = React.useMemo<NotificationsContextValue>(
     () => ({
       activeTab,
@@ -208,6 +316,7 @@ export function NotificationsProvider({
       loadMore,
       markRead,
       markAllRead,
+      resolveInvitation,
     }),
     [
       activeTab,
@@ -224,11 +333,15 @@ export function NotificationsProvider({
       loadMore,
       markRead,
       markAllRead,
+      resolveInvitation,
     ]
   )
 
   return (
     <NotificationsContext.Provider value={value}>
+      {userId && (
+        <RealtimeBridge userId={userId} onMessage={handleLiveMessage} />
+      )}
       {children}
     </NotificationsContext.Provider>
   )

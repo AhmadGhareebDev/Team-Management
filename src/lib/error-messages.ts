@@ -25,7 +25,6 @@ export const actionErrorMessages: Record<string, string> = {
   PROJECT_NOT_FOUND: "This project no longer exists.",
   TASK_NOT_FOUND: "This task no longer exists.",
   DEPENDENCY_NOT_FOUND: "This dependency no longer exists.",
-  SUBTASK_NOT_FOUND: "This subtask no longer exists.",
   TARGET_NOT_FOUND: "That member is no longer part of this workspace.",
 
   ALREADY_MEMBER: "This user is already a member.",

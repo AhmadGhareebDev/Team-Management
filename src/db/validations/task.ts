@@ -96,13 +96,3 @@ export const taskAssigneesSchema = z.object({
 })
 
 export type TaskAssigneesSchemaType = z.infer<typeof taskAssigneesSchema>
-
-export const insertSubtaskSchema = z.object({
-    title: z
-        .string()
-        .trim()
-        .min(1, "Title is required")
-        .max(200, "Title must be at most 200 characters"),
-})
-
-export type InsertSubtaskSchemaType = z.infer<typeof insertSubtaskSchema>

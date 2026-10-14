@@ -22,9 +22,10 @@ import { insertTaskSchema,
 } from "@/db/validations"
 import { createNotification, clearTaskDateNotifications } from "@/lib/notifications"
 import { recordActivity, getUserNames } from "@/lib/activity"
-
+import { publishCanvasUpserts, publishCanvasDeletes, publishWorkspaceInvalidation } from "@/lib/ably-server"
 const SPACING = 80
 
+/** Returns true when the status was actually rewritten. */
 async function syncTaskBlocked(taskId: string) {
     const existing = await db.query.task.findFirst({
         where: eq(task.id, taskId),
@@ -32,7 +33,7 @@ async function syncTaskBlocked(taskId: string) {
     })
 
     if (!existing) {
-        return
+        return false
     }
 
     const deps = await db.query.taskDependencies.findMany({
@@ -55,18 +56,32 @@ async function syncTaskBlocked(taskId: string) {
             .update(task)
             .set({ status: nextStatus })
             .where(eq(task.id, taskId))
+        return true
     }
+
+    return false
 }
 
-async function recomputeDependents(dependsOnId: string) {
+/**
+ * Re-evaluates every task blocked by `dependsOnId`. Returns the ids whose
+ * status changed so callers can tell other viewers about them; a status change
+ * on one task can silently rewrite many others.
+ */
+async function recomputeDependents(dependsOnId: string): Promise<string[]> {
     const dependents = await db.query.taskDependencies.findMany({
         where: eq(taskDependencies.dependsOnId, dependsOnId),
         columns: { taskId: true },
     })
 
+    const changed: string[] = []
+
     for (const dependent of dependents) {
-        await syncTaskBlocked(dependent.taskId)
+        if (await syncTaskBlocked(dependent.taskId)) {
+            changed.push(dependent.taskId)
+        }
     }
+
+    return changed
 }
 
 async function notifyUnblockedDependents({
@@ -183,6 +198,9 @@ export async function createTask({
             metadata: { title: parsed.data.title },
         })
 
+        publishCanvasUpserts(projectId, [newTaskId])
+        publishWorkspaceInvalidation(access.workspaceId)
+
         return { success: true }
     } catch {
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -254,6 +272,9 @@ export async function updateTask({
             entityId: taskId,
             metadata: { title: existing.title },
         })
+
+        publishCanvasUpserts(projectId, [taskId])
+        publishWorkspaceInvalidation(access.workspaceId)
 
         return { success: true }
     } catch {
@@ -340,6 +361,7 @@ export async function updateTaskStatus({
     }
 
     let unblockedDependents: string[] = []
+    let cascadedDependents: string[] = []
 
     try {
         if (parsed.data.status === "done") {
@@ -355,7 +377,7 @@ export async function updateTaskStatus({
                 .set({ status: "done" })
                 .where(eq(task.id, taskId))
 
-            await recomputeDependents(taskId)
+            cascadedDependents = await recomputeDependents(taskId)
 
             const after = await db.query.task.findMany({
                 where: inArray(
@@ -374,8 +396,13 @@ export async function updateTaskStatus({
                 .set({ status: parsed.data.status })
                 .where(eq(task.id, taskId))
 
-            await recomputeDependents(taskId)
+            cascadedDependents = await recomputeDependents(taskId)
         }
+
+        // Dependents whose status the cascade rewrote have to travel with this
+        // event, or other viewers keep showing a stale blocked badge.
+        publishCanvasUpserts(projectId, [taskId, ...cascadedDependents])
+        publishWorkspaceInvalidation(access.workspaceId)
 
         await recordActivity({
             workspaceId: access.workspaceId,
@@ -558,6 +585,10 @@ export async function deleteTask({
             metadata: { title: existing.title },
         })
 
+        publishCanvasDeletes(projectId, [taskId])
+        publishCanvasUpserts(projectId, dependentIds)
+        publishWorkspaceInvalidation(access.workspaceId)
+
         return { success: true }
     } catch {
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -701,6 +732,9 @@ export async function setTaskAssignees({
                     metadata: { title: existing.title, name: names.get(userId) },
                 })
             }
+
+            publishCanvasUpserts(projectId, [taskId])
+            publishWorkspaceInvalidation(access.workspaceId)
         }
 
         return { success: true }
@@ -832,6 +866,9 @@ export async function addTaskDependency({
             },
         })
 
+        publishCanvasUpserts(projectId, [taskId])
+        publishWorkspaceInvalidation(access.workspaceId)
+
         return { success: true }
     } catch {
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
@@ -927,6 +964,9 @@ export async function removeTaskDependency({
                 name: blocker?.title,
             },
         })
+
+        publishCanvasUpserts(projectId, [depRow.taskId])
+        publishWorkspaceInvalidation(access.workspaceId)
 
         return { success: true }
     } catch {
