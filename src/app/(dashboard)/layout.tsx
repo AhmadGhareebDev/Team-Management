@@ -11,7 +11,6 @@ import {
   getDefaultNotificationTab,
   type NotificationTab,
 } from "@/db/queries/notifications"
-import { runNotificationsScan } from "@/lib/notifications"
 import { PAGE_SIZES } from "@/lib/pagination"
 
 
@@ -29,11 +28,10 @@ export default async function DashboardLayout({
   let unreadTotal = 0
 
   if (session) {
-    try {
-      await runNotificationsScan(session.user.id)
-    } catch (error) {
-      console.error("Error running notifications scan:", error)
-    }
+    // No notification scan here on purpose. This used to run on every dashboard
+    // render, which meant overdue and due-soon alerts only ever fired while
+    // somebody happened to have the app open, and it made every page load a
+    // write. /api/cron/notifications owns that now.
 
     // The default tab depends on the counts, so these two cannot run in
     // parallel. Seeding the tab we actually open on keeps the server and

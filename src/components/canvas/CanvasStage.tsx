@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -377,10 +377,33 @@ export default function CanvasStage({
     setEdges((prev) => mergeCanvasEdges(prev, incoming))
   }
 
-  const realtimeElements = useProjectRealtime(projectId, handleCanvasEvent)
-
   const dragStartPositions = useRef<Record<string, { x: number; y: number }>>({})
   const positionSaveTimers = useRef<Map<string, { timer: ReturnType<typeof setTimeout>; position: { x: number; y: number } }>>(new Map())
+
+  // Resync when the socket comes back or the tab regains focus: anything changed
+  // while we were disconnected was never delivered, so the board is stale. A
+  // refresh re-renders the server props, and the effect above rebuilds nodes and
+  // edges from them. Skipped while a position save is still in flight, because
+  // positions are never broadcast and the server copy can be briefly older.
+  const resyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleResync = useCallback(() => {
+    if (positionSaveTimers.current.size > 0) return
+
+    if (resyncTimerRef.current) clearTimeout(resyncTimerRef.current)
+    resyncTimerRef.current = setTimeout(() => {
+      resyncTimerRef.current = null
+      router.refresh()
+    }, 300)
+  }, [router])
+
+  useEffect(() => {
+    return () => {
+      if (resyncTimerRef.current) clearTimeout(resyncTimerRef.current)
+    }
+  }, [])
+
+  const realtimeElements = useProjectRealtime(projectId, handleCanvasEvent, handleResync)
 
   const savePosition = async (taskId: string, position: { x: number; y: number }) => {
     const result = await updateTaskPosition({ projectId, taskId, position })

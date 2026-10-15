@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "task_dependencies_task_depends_on_unique" ON "task_dependencies" USING btree ("task_id","depends_on_id");

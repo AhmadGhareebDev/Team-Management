@@ -138,29 +138,28 @@ export async function clearTaskDateNotifications(taskId: string) {
 }
 
 /**
- * Lazy scan run when the app opens. Detects tasks that became overdue,
- * deadlines approaching within the next 24h, tasks blocked by an overdue
- * dependency (Dependency Overdue flag), and dependencies that got back on
- * track. Notifications are created once per (user, task, type) so repeated
- * scans are idempotent.
+ * Detects tasks that became overdue, deadlines approaching within the next 24h,
+ * tasks blocked by an overdue dependency (Dependency Overdue flag), and
+ * dependencies that got back on track. Notifications are created once per
+ * (user, task, type) so repeated scans are idempotent, which is what makes it
+ * safe to run this on a schedule.
+ *
+ * Scoped by workspace rather than by user: one pass over a workspace covers
+ * every member, and the recipients are derived from the task's assignees and the
+ * workspace's owners and admins. Sweeping per user would rescan the same rows
+ * once per member.
  */
-export async function runNotificationsScan(userId: string) {
+export async function runNotificationsScan() {
   const now = Date.now()
 
-  const memberships = await db.query.workspaceMembers.findMany({
-    where: eq(workspaceMembers.userId, userId),
-    columns: { workspaceId: true },
-    with: {
-      workspace: { columns: { id: true, name: true } },
-    },
+  const workspaces = await db.query.workspace.findMany({
+    columns: { id: true, name: true },
   })
 
-  if (memberships.length === 0) return
+  if (workspaces.length === 0) return
 
-  const workspaceIds = memberships.map((m) => m.workspaceId)
-  const workspaceNameById = new Map(
-    memberships.map((m) => [m.workspaceId, m.workspace.name])
-  )
+  const workspaceIds = workspaces.map((w) => w.id)
+  const workspaceNameById = new Map(workspaces.map((w) => [w.id, w.name]))
 
   const projects = await db.query.project.findMany({
     where: inArray(project.workspaceId, workspaceIds),
@@ -364,9 +363,10 @@ export async function runNotificationsScan(userId: string) {
     })
   }
 
+  // No user filter here: the flag is a property of the task's dependencies, not
+  // of who is looking, so it is cleared for every recipient at once.
   const flaggedRows = await db.query.notification.findMany({
     where: and(
-      eq(notification.userId, userId),
       eq(notification.type, "dependency_overdue"),
       inArray(notification.taskId, taskIds)
     ),

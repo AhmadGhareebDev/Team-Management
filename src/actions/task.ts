@@ -2,7 +2,7 @@
 import { randomUUID } from "crypto"
 import { db } from "@/db"
 import { task, taskAssignees, taskDependencies, projectMembers } from "@/db/schemas"
-import { eq, and, or, inArray } from "drizzle-orm"
+import { eq, and, or, inArray, sql } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { after } from "next/server"
@@ -23,43 +23,51 @@ import { insertTaskSchema,
 import { createNotification, clearTaskDateNotifications } from "@/lib/notifications"
 import { recordActivity, getUserNames } from "@/lib/activity"
 import { publishCanvasUpserts, publishCanvasDeletes, publishWorkspaceInvalidation } from "@/lib/ably-server"
+import { buildDependencyGraph, wouldCreateCycle } from "@/lib/dependency-graph"
 const SPACING = 80
 
-/** Returns true when the status was actually rewritten. */
+/** Postgres unique violation. Used to turn a lost insert race into a domain error. */
+function isUniqueViolation(error: unknown): boolean {
+    if (typeof error !== "object" || error === null) return false
+    const e = error as { code?: unknown; cause?: { code?: unknown } }
+    return e.code === "23505" || e.cause?.code === "23505"
+}
+
+/**
+ * Returns true when the status was actually rewritten.
+ *
+ * This runs as one atomic UPDATE rather than a read-then-write pair. The previous
+ * version read the status, computed the answer in JS, then wrote it back, so two
+ * concurrent dependency edits on the same task could interleave and leave a stale
+ * value. A single statement cannot: Postgres evaluates the WHERE and the new value
+ * under one row lock. RETURNING gives us "did it actually change", which the
+ * callers use to decide whether to notify.
+ *
+ * db.transaction() is not an option here: the neon-http driver has none.
+ */
 async function syncTaskBlocked(taskId: string) {
-    const existing = await db.query.task.findFirst({
-        where: eq(task.id, taskId),
-        columns: { id: true, status: true },
-    })
+    const rows = await db.execute(sql`
+        WITH pending AS (
+            SELECT EXISTS (
+                SELECT 1
+                FROM task_dependencies d
+                JOIN "task" dep ON dep.id = d.depends_on_id
+                WHERE d.task_id = ${taskId} AND dep.status <> 'done'
+            ) AS has_pending
+        )
+        UPDATE "task" t
+        SET status = (CASE WHEN pending.has_pending THEN 'blocked' ELSE 'todo' END)::task_status,
+            updated_at = now()
+        FROM pending
+        WHERE t.id = ${taskId}
+          AND (
+                (pending.has_pending AND t.status <> 'blocked')
+             OR (NOT pending.has_pending AND t.status = 'blocked')
+          )
+        RETURNING t.id
+    `)
 
-    if (!existing) {
-        return false
-    }
-
-    const deps = await db.query.taskDependencies.findMany({
-        where: eq(taskDependencies.taskId, taskId),
-        columns: { id: true },
-        with: { dependsOn: { columns: { status: true } } },
-    })
-
-    const hasPendingDeps = deps.some((d) => d.dependsOn.status !== "done")
-
-    let nextStatus: "todo" | "blocked" | null = null
-    if (hasPendingDeps && existing.status !== "blocked") {
-        nextStatus = "blocked"
-    } else if (!hasPendingDeps && existing.status === "blocked") {
-        nextStatus = "todo"
-    }
-
-    if (nextStatus) {
-        await db
-            .update(task)
-            .set({ status: nextStatus })
-            .where(eq(task.id, taskId))
-        return true
-    }
-
-    return false
+    return (rows as unknown as { rows: unknown[] }).rows?.length > 0
 }
 
 /**
@@ -802,6 +810,10 @@ export async function addTaskDependency({
         return { success: false, error: "ALREADY_DEPENDENT" }
     }
 
+    // Duplicate edges are also blocked by a unique index. The check above gives the
+    // nice error message; this catch covers the race where a concurrent request wins
+    // between the two.
+
     const projectDependencies = await db.query.taskDependencies.findMany({
         where: or(
             inArray(taskDependencies.taskId, ids),
@@ -813,32 +825,9 @@ export async function addTaskDependency({
         },
     })
 
-    const dependsOnMap = new Map<string, string[]>()
-    for (const dep of projectDependencies) {
-        const list = dependsOnMap.get(dep.taskId) ?? []
-        list.push(dep.dependsOnId)
-        dependsOnMap.set(dep.taskId, list)
-    }
-
-    const createsCycle = (start: string, blocked: string): boolean => {
-        const queue = [start]
-        const visited = new Set<string>()
-
-        while (queue.length > 0) {
-            const current = queue.shift()!
-            if (current === blocked) return true
-            if (visited.has(current)) continue
-            visited.add(current)
-
-            for (const next of dependsOnMap.get(current) ?? []) {
-                queue.push(next)
-            }
-        }
-
-        return false
-    }
-
-    if (createsCycle(dependsOnId, taskId)) {
+    // Adding taskId -> dependsOnId is illegal when dependsOnId can already
+    // reach taskId, which would close a loop.
+    if (wouldCreateCycle(buildDependencyGraph(projectDependencies), taskId, dependsOnId)) {
         return { success: false, error: "CYCLIC_DEPENDENCY" }
     }
 
@@ -870,7 +859,11 @@ export async function addTaskDependency({
         publishWorkspaceInvalidation(access.workspaceId)
 
         return { success: true }
-    } catch {
+    } catch (error) {
+        if (isUniqueViolation(error)) {
+            return { success: false, error: "ALREADY_DEPENDENT" }
+        }
+        console.error("Error adding task dependency:", error);
         return { success: false, error: "INTERNAL_SERVER_ERROR" }
     }
 }
