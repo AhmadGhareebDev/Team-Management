@@ -9,7 +9,7 @@ export default function TextFrameWrapper() {
 
   return (
     <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 max-w-4xl mx-auto">
-      <div className="absolute -z-10 h-48 w-96 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+      <div className="absolute -z-10 h-48 w-96 rounded-none bg-primary/10 blur-3xl pointer-events-none" />
 
       <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-foreground">
         <TextFrame

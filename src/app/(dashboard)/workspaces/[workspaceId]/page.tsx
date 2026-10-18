@@ -2,16 +2,38 @@ import { Settings, ArrowLeft } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { getWorkspaceById } from "@/db/queries/workspaces"
+import type { Metadata } from "next"
+import { headers } from "next/headers"
+import { getWorkspaceById, getUserWorkspaceRole } from "@/db/queries/workspaces"
 import { requireWorkspaceMembership } from "@/lib/guards"
+import { auth } from "@/lib/auth"
 
 import { CreateProject } from "../_components/CreateProject"
 import InviteUser from "../_components/InviteUser"
 import ProjectList from "../_components/ProjectsList"
 import WorkspaceMembersList from "../_components/WorkspaceMembersList"
 import { WorkspaceRealtimeBridge } from "@/components/web/WorkspaceRealtimeBridge"
+import { ProjectsGridSkeleton, MemberListSkeleton } from "@/components/skeletons"
+import { searchParamsKey } from "@/lib/pagination"
+import { Suspense } from "react"
 
-export const instant = false;
+export const instant = false
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ workspaceId: string }>
+}): Promise<Metadata> {
+  const { workspaceId } = await params
+  const session = await auth.api.getSession({ headers: await headers() })
+
+  if (session && (await getUserWorkspaceRole(workspaceId, session.user.id))) {
+    const workspace = await getWorkspaceById(workspaceId)
+    return { title: workspace?.name ?? "Workspace" }
+  }
+
+  return { title: "Workspace" }
+}
 
 export default async function WorkspaceDetailsPage({
   params,
@@ -24,6 +46,9 @@ export default async function WorkspaceDetailsPage({
   const { role } = await requireWorkspaceMembership(workspaceId);
   const workspace = await getWorkspaceById(workspaceId);
   const resolvedSearchParams = await searchParams;
+  // Both columns paginate over the same query, so one key covers them: changing
+  // the page remounts the boundaries and reveals their skeletons immediately.
+  const listKey = searchParamsKey(resolvedSearchParams)
 
   if (!workspace) {
     notFound();
@@ -57,11 +82,15 @@ export default async function WorkspaceDetailsPage({
             <CreateProject workspaceId={workspaceId} role={role}/>
           </div>
 
-          <ProjectList
-            workspaceId={workspaceId}
-            role={role}
-            searchParams={resolvedSearchParams}
-          />
+          {/* Both columns stream independently: the members list usually
+              resolves first, and neither holds up the headings above them. */}
+          <Suspense key={listKey} fallback={<ProjectsGridSkeleton />}>
+            <ProjectList
+              workspaceId={workspaceId}
+              role={role}
+              searchParams={resolvedSearchParams}
+            />
+          </Suspense>
         </div>
 
         <div className="space-y-4 self-start md:col-span-4 md:sticky md:top-6">
@@ -70,11 +99,13 @@ export default async function WorkspaceDetailsPage({
             <InviteUser workspaceId={workspaceId} role={role} />
           </div>
 
-          <WorkspaceMembersList
-            workspaceId={workspaceId}
-            role={role}
-            searchParams={resolvedSearchParams}
-          />
+          <Suspense key={listKey} fallback={<MemberListSkeleton rows={4} />}>
+            <WorkspaceMembersList
+              workspaceId={workspaceId}
+              role={role}
+              searchParams={resolvedSearchParams}
+            />
+          </Suspense>
         </div>
       </div>
     </div>

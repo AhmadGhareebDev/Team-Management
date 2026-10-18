@@ -30,7 +30,7 @@ export const auth = betterAuth({
         requireEmailVerification: true,
         autoSignIn: false,
         sendResetPassword: async ({user , url }) => {
-            void sendEmail({
+            await sendEmail({
                 to: user.email,
                 subject: "Reset your password",
                 html: `
@@ -73,7 +73,7 @@ export const auth = betterAuth({
                 `;
             }
 
-            sendEmail({
+            await sendEmail({
                 to: email,
                 subject: subject,
                 html: htmlContent,

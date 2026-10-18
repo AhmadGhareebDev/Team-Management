@@ -57,7 +57,7 @@ export default function UrlSelect({
       <SelectTrigger
         aria-label={ariaLabel}
         className={cn(
-          "h-9! rounded-md border border-border/60 bg-background px-3 text-xs font-normal normal-case tracking-normal",
+          "h-9! rounded-none border border-border/60 bg-background px-3 text-xs font-normal normal-case tracking-normal",
           className
         )}
       >
@@ -69,7 +69,7 @@ export default function UrlSelect({
           }}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent align="start" className="rounded-md">
+      <SelectContent align="start" className="rounded-none">
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value} className="text-xs">
             {option.label}

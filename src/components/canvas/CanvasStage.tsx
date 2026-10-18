@@ -580,10 +580,10 @@ export default function CanvasStage({
         }`}
       >
         <div className="flex justify-center px-4 pt-4 pointer-events-none">
-          <div className="relative pointer-events-auto flex w-full max-w-3xl items-center gap-3 rounded-full border-0 bg-card px-4 py-2 transition-colors">
+          <div className="relative pointer-events-auto flex w-full max-w-3xl items-center gap-3 rounded-none border-0 bg-card px-4 py-2 transition-colors">
             <Link
               href={`/workspaces/${workspaceId}`}
-              className={buttonVariants({ variant: "ghost", size: "icon-sm", className: "rounded-full hover:bg-accent text-muted-foreground hover:text-foreground shrink-0" })}
+              className={buttonVariants({ variant: "ghost", size: "icon-sm", className: "rounded-none hover:bg-accent text-muted-foreground hover:text-foreground shrink-0" })}
             >
               <ArrowLeft className="size-4" />
             </Link>
@@ -595,7 +595,7 @@ export default function CanvasStage({
                   variant: "ghost",
                   size: "xs",
                   className:
-                    "rounded-full px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground",
+                    "rounded-none px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground",
                 })}
                 aria-label="Project dashboard"
                 title="Project dashboard"
@@ -630,13 +630,13 @@ export default function CanvasStage({
                   )}
                 </AvatarGroup>
 
-                <div className="invisible absolute top-full right-0 z-30 mt-3 min-w-56 rounded-xl border-0 bg-popover p-2 opacity-0 transition-opacity group-hover/members:visible group-hover/members:opacity-100">
+                <div className="invisible absolute top-full right-0 z-30 mt-3 min-w-56 rounded-none border-0 bg-popover p-2 opacity-0 transition-opacity group-hover/members:visible group-hover/members:opacity-100">
                   <p className="px-2 pt-1 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                     {project.members.length} {project.members.length === 1 ? "member" : "members"}
                   </p>
                   <div className="space-y-0.5">
                     {project.members.map((m) => (
-                      <div key={m.user.id} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-accent hover:text-accent-foreground transition-colors">
+                      <div key={m.user.id} className="flex items-center gap-2.5 rounded-none px-2 py-1.5 hover:bg-accent hover:text-accent-foreground transition-colors">
                         <ImageKitAvatar
                           src={m.user.avatar_url}
                           alt={m.user.id === currentUserId ? "You" : m.user.name}
@@ -663,12 +663,12 @@ export default function CanvasStage({
                   <Input
                     {...form.register("title")}
                     placeholder="New task..."
-                    className="h-7 w-36 rounded-full bg-background/60 px-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring border-border/60"
+                    className="h-7 w-36 rounded-none bg-background/60 px-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring border-border/60"
                   />
                   {form.formState.errors.title && (
                     <FieldError
                       errors={[form.formState.errors.title]}
-                      className="absolute top-full right-0 z-30 mt-1.5 rounded-md bg-destructive px-2 py-1 text-[10px] text-destructive-foreground shadow-md"
+                      className="absolute top-full right-0 z-30 mt-1.5 rounded-none bg-destructive px-2 py-1 text-[10px] text-destructive-foreground shadow-md"
                     />
                   )}
                 </div>
@@ -677,7 +677,7 @@ export default function CanvasStage({
                   size="icon-sm"
                   disabled={isCreatePending}
                   aria-label="Add task"
-                  className="size-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
+                  className="size-7 rounded-none bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
                 >
                   {isCreatePending ? <Spinner className="size-3" /> : <Plus className="size-3.5" />}
                 </Button>
@@ -689,7 +689,7 @@ export default function CanvasStage({
               type="button"
               onClick={() => setIsBarVisible(false)}
               title="Hide Bar"
-              className="absolute -top-3 left-1/2 -translate-x-1/2 flex size-6 items-center justify-center rounded-full border-0 bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors pointer-events-auto"
+              className="absolute -top-3 left-1/2 -translate-x-1/2 flex size-6 items-center justify-center rounded-none border-0 bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors pointer-events-auto"
             >
               <ChevronUp className="size-3.5" />
             </button>
@@ -703,7 +703,7 @@ export default function CanvasStage({
           type="button"
           onClick={() => setIsBarVisible(true)}
           title="Show Bar"
-          className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex h-6 w-10 items-center justify-center rounded-b-xl border-0 bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex h-6 w-10 items-center justify-center rounded-none border-0 bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         >
           <ChevronDown className="size-4" />
         </button>
@@ -738,7 +738,7 @@ export default function CanvasStage({
           color="currentColor" 
           className="text-slate-400 dark:text-slate-600 opacity-60" 
         />
-        <Controls className="!rounded-lg !border-0 bg-card overflow-hidden" />
+        <Controls className="!rounded-none !border-0 bg-card overflow-hidden" />
         <FocusOnTask taskId={initialTaskId} />
       </ReactFlow>
 

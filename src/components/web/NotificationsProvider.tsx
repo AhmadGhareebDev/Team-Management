@@ -9,10 +9,15 @@ import { AblyProvider, ChannelProvider, useChannel } from "ably/react"
 import { toast } from "@/components/ui/toast"
 import {
   loadNotifications,
+  loadNotificationSeed,
   loadNotificationTabCounts,
 } from "@/actions/notifications-loader"
 import { markAllNotificationsAsRead } from "@/actions/notifications"
-import type { Notification } from "@/db/queries/notifications"
+import type {
+  Notification,
+  NotificationCounts,
+} from "@/db/queries/notifications"
+import { authClient } from "@/lib/auth-client"
 import {
   NOTIFICATION_TAB_TYPES,
   type NotificationTab,
@@ -29,6 +34,7 @@ type NotificationsContextValue = {
   counts: Record<NotificationTab, number>
   unreadCount: number
   hasMore: boolean
+  isSeeding: boolean
   isSwitchingTab: boolean
   isLoadingMore: boolean
   isMarkingAll: boolean
@@ -50,6 +56,7 @@ const INERT: NotificationsContextValue = {
   counts: { invitations: 0, tasks: 0, members: 0 },
   unreadCount: 0,
   hasMore: false,
+  isSeeding: false,
   isSwitchingTab: false,
   isLoadingMore: false,
   isMarkingAll: false,
@@ -118,32 +125,56 @@ function RealtimeBridge({
 }
 
 export function NotificationsProvider({
-  userId,
-  initialTab,
-  notifications,
-  total,
-  counts,
-  unreadTotal,
   children,
 }: {
-  userId: string | null
-  initialTab: NotificationTab
-  notifications: Notification[]
-  total: number
-  counts: Record<NotificationTab, number>
-  unreadTotal: number
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const [items, setItems] = React.useState(notifications)
-  const [itemTotal, setItemTotal] = React.useState(total)
-  const [activeTab, setActiveTab] = React.useState<NotificationTab>(initialTab)
-  const [tabCounts, setTabCounts] = React.useState(counts)
-  const [unreadCount, setUnreadCount] = React.useState(unreadTotal)
+  const { data: session } = authClient.useSession()
+  const userId = session?.user.id ?? null
+  const [items, setItems] = React.useState<Notification[]>([])
+  const [itemTotal, setItemTotal] = React.useState(0)
+  const [activeTab, setActiveTab] =
+    React.useState<NotificationTab>("invitations")
+  const [tabCounts, setTabCounts] = React.useState<NotificationCounts>({
+    invitations: 0,
+    tasks: 0,
+    members: 0,
+  })
+  const [unreadCount, setUnreadCount] = React.useState(0)
+  const [isSeeding, setIsSeeding] = React.useState(true)
   const [readIds, setReadIds] = React.useState<Set<string>>(() => new Set())
   const [isMarkingAll, startMarkAllTransition] = useTransition()
   const [isSwitchingTab, startTabTransition] = useTransition()
   const [isLoadingMore, startLoadMoreTransition] = useTransition()
+
+  React.useEffect(() => {
+    let cancelled = false
+
+    const seed = async () => {
+      const result = await loadNotificationSeed().catch(() => null)
+
+      if (cancelled) return
+
+      setIsSeeding(false)
+
+      if (!result || "error" in result) return
+
+      setItems(result.items)
+      setItemTotal(result.total)
+      setActiveTab(result.tab)
+      setTabCounts(result.counts)
+      setUnreadCount(
+        Object.values(result.unread).reduce((sum, n) => sum + n, 0)
+      )
+    }
+
+    seed()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Notifications are never removed from the list. Marking as read only
   // clears the unread dot, so track it locally until the server catches up.
@@ -308,6 +339,7 @@ export function NotificationsProvider({
       counts: tabCounts,
       unreadCount,
       hasMore,
+      isSeeding,
       isSwitchingTab,
       isLoadingMore,
       isMarkingAll,
@@ -325,6 +357,7 @@ export function NotificationsProvider({
       tabCounts,
       unreadCount,
       hasMore,
+      isSeeding,
       isSwitchingTab,
       isLoadingMore,
       isMarkingAll,

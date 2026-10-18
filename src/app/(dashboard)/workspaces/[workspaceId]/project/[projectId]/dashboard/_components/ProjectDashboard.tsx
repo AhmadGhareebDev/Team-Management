@@ -48,7 +48,7 @@ function StatTile({
   accent?: boolean
 }) {
   return (
-    <div className="rounded-xl border-0 bg-card p-4 shadow-sm ring-1 ring-foreground/5">
+    <div className="rounded-none border-0 bg-card p-4 shadow-sm ring-1 ring-foreground/5">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p
         className={cn(
@@ -81,7 +81,7 @@ function DashboardTaskRow({
   return (
     <Link
       href={`/workspaces/${workspaceId}/project/${projectId}?task=${task.id}`}
-      className="group flex flex-col gap-2 rounded-lg border-0 bg-card p-3 shadow-sm ring-1 ring-foreground/5 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="group flex flex-col gap-2 rounded-none border-0 bg-card p-3 shadow-sm ring-1 ring-foreground/5 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 text-sm font-medium leading-snug text-foreground">
@@ -93,7 +93,7 @@ function DashboardTaskRow({
       </div>
 
       {isBlocked && (
-        <div className="flex items-start gap-1.5 rounded-md border border-destructive/20 bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
+        <div className="flex items-start gap-1.5 rounded-none border border-destructive/20 bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
           <AlertCircle className="mt-0.5 size-3 shrink-0" />
           <span className="min-w-0 break-words">
             Blocked by{" "}
@@ -158,10 +158,10 @@ function StatusColumn({
   const hidden = Math.max(0, totalCount - tasks.length)
 
   return (
-    <div className="flex min-h-40 flex-col gap-3 rounded-xl border-0 bg-muted/20 p-3 ring-1 ring-foreground/5">
+    <div className="flex min-h-40 flex-col gap-3 rounded-none border-0 bg-muted/20 p-3 ring-1 ring-foreground/5">
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2">
-          <span className={cn("size-2 shrink-0 rounded-full", statusLeftAccent[status])} />
+          <span className={cn("size-2 shrink-0 rounded-none", statusLeftAccent[status])} />
           <h3 className="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {statusLabels[status]}
           </h3>
@@ -172,7 +172,7 @@ function StatusColumn({
       </div>
 
       {tasks.length === 0 ? (
-        <p className="rounded-lg border-0 bg-muted/40 px-3 py-4 text-center text-[11px] text-muted-foreground">
+        <p className="rounded-none border-0 bg-muted/40 px-3 py-4 text-center text-[11px] text-muted-foreground">
           No tasks
         </p>
       ) : (

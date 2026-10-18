@@ -29,6 +29,7 @@ export function NotificationsDropdown() {
     counts,
     unreadCount,
     hasMore,
+    isSeeding,
     isSwitchingTab,
     isLoadingMore,
     isMarkingAll,
@@ -55,8 +56,8 @@ export function NotificationsDropdown() {
         <Bell />
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 flex size-2 items-center justify-center">
-            <span className="absolute size-2 rounded-full bg-primary" />
-            <span className="absolute size-2 animate-ping rounded-full bg-primary/60" />
+            <span className="absolute size-2 rounded-none bg-primary" />
+            <span className="absolute size-2 animate-ping rounded-none bg-primary/60" />
           </span>
         )}
       </DropdownMenuTrigger>
@@ -82,7 +83,11 @@ export function NotificationsDropdown() {
         </div>
 
         <div className="max-h-80 overflow-y-auto">
-          {items.length === 0 ? (
+          {isSeeding && items.length === 0 ? (
+            <div className="flex justify-center px-4 py-10">
+              <Spinner className="size-5" />
+            </div>
+          ) : items.length === 0 ? (
             <div className="px-4 py-10 text-center">
               <Clock className="mx-auto size-6 text-muted-foreground" />
               <p className="mt-3 text-sm font-medium text-foreground">

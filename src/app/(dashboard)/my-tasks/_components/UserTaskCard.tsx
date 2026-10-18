@@ -89,7 +89,7 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
           )}
 
           {isBlocked && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-destructive/20 bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
+            <div className="flex items-center gap-1.5 rounded-none border border-destructive/20 bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
               <AlertCircle className="size-3 shrink-0" />
               <span className="truncate">
                 Blocked by {pendingBlockers.map((d) => d.dependsOn.title).join(", ")}

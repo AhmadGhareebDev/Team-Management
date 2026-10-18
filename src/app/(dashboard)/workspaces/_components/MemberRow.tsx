@@ -228,7 +228,7 @@ function RoleBadge({ role }: { role: "owner" | "admin" | "member" }) {
   return (
     <span
       className={cn(
-        "flex w-16 shrink-0 items-center justify-center rounded-sm px-0 py-0.5 text-[15px] font-mono font-bold leading-none",
+        "flex w-16 shrink-0 items-center justify-center rounded-none px-0 py-0.5 text-[15px] font-mono font-bold leading-none",
         roleStyles[role] ?? roleStyles.member
       )}
     >
@@ -289,11 +289,11 @@ function MemberAssignmentsPanel({
             <li key={a.id}>
               <Link
                 href={`/workspaces/${workspaceId}/project/${a.projectId}?task=${a.id}`}
-                className="flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/60"
+                className="flex items-start gap-2 rounded-none px-2 py-1.5 transition-colors hover:bg-muted/60"
               >
                 <span
                   className={cn(
-                    "mt-1.5 size-1.5 shrink-0 rounded-full",
+                    "mt-1.5 size-1.5 shrink-0 rounded-none",
                     statusLeftAccent[a.status]
                   )}
                 />

@@ -160,12 +160,12 @@ export default function TaskDetailsPanel({
         {/* Status Section */}
         <div className="space-y-2">
           <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Status</p>
-          <div className="flex items-center justify-between gap-2 rounded-lg border-0 bg-muted/20 p-2.5">
+          <div className="flex items-center justify-between gap-2 rounded-none border-0 bg-muted/20 p-2.5">
             {canPickStatus ? (
               <Select value={task.status} onValueChange={handleStatusChange}>
                 <SelectTrigger
                   aria-label="Change task status"
-                  className="h-7! rounded-md border-0 bg-background px-2 text-xs font-normal normal-case tracking-normal"
+                  className="h-7! rounded-none border-0 bg-background px-2 text-xs font-normal normal-case tracking-normal"
                 >
                   <SelectValue>
                     {(value) => {
@@ -176,7 +176,7 @@ export default function TaskDetailsPanel({
                       return (
                         <span
                           className={cn(
-                            "rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase",
+                            "rounded-none border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase",
                             statusBadge[shown]
                           )}
                         >
@@ -186,7 +186,7 @@ export default function TaskDetailsPanel({
                     }}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent align="start" className="min-w-40 rounded-md">
+                <SelectContent align="start" className="min-w-40 rounded-none">
                   {TASK_STATUSES.map((status) => (
                     <SelectItem
                       key={status}
@@ -200,7 +200,7 @@ export default function TaskDetailsPanel({
                 </SelectContent>
               </Select>
             ) : (
-              <span className={cn("rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase", statusBadge[task.status])}>
+              <span className={cn("rounded-none border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase", statusBadge[task.status])}>
                 {statusLabels[task.status]}
               </span>
             )}
@@ -219,7 +219,7 @@ export default function TaskDetailsPanel({
 
           {/* Blocked Alerts */}
           {overdueBlockers.length > 0 && (
-            <div className="flex items-center gap-2 rounded-lg border-0 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+            <div className="flex items-center gap-2 rounded-none border-0 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
               <Clock className="size-3.5 shrink-0" />
               <span className="leading-tight">
                 Dependency overdue: {overdueBlockers.map((d) => d.dependsOn.title).join(", ")}
@@ -244,7 +244,7 @@ export default function TaskDetailsPanel({
             placeholder="Description..."
             disabled={!isManager}
             rows={3}
-            className="w-full resize-none rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full resize-none rounded-none border border-border/60 bg-muted/20 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           />
 
           <div className="relative">
@@ -268,7 +268,7 @@ export default function TaskDetailsPanel({
                   disabled={!isManager}
                   onClick={() => detailsForm.setValue("priority", priority.value, { shouldDirty: true, shouldValidate: true })}
                   className={cn(
-                    "rounded-md border-0 px-2.5 py-1 text-[11px] font-semibold capitalize transition-colors",
+                    "rounded-none border-0 px-2.5 py-1 text-[11px] font-semibold capitalize transition-colors",
                     active 
                       ? "border-primary bg-primary text-primary-foreground shadow-xs" 
                       : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -295,7 +295,7 @@ export default function TaskDetailsPanel({
         {/* Assignees Section */}
         <div className="space-y-2">
           <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Assignees</p>
-          <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-border/50 bg-muted/20 p-1.5 scrollbar-thin">
+          <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-none border border-border/50 bg-muted/20 p-1.5 scrollbar-thin">
             {members.length === 0 && (
               <p className="px-2 py-1.5 text-xs text-muted-foreground">No members in this project yet.</p>
             )}
@@ -308,7 +308,7 @@ export default function TaskDetailsPanel({
                   disabled={!isManager}
                   onClick={() => toggleAssignee(m.user.id)}
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors",
+                    "flex w-full items-center gap-2.5 rounded-none px-2 py-1.5 text-left transition-colors",
                     selectedItem ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50 text-foreground",
                     !isManager && "cursor-default"
                   )}
@@ -353,7 +353,7 @@ export default function TaskDetailsPanel({
                 Delete task
               </Button>
             ) : (
-              <div className="flex flex-col gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+              <div className="flex flex-col gap-2 rounded-none border border-destructive/20 bg-destructive/10 p-3">
                 <p className="text-xs text-destructive font-medium leading-normal">
                   
                 </p>

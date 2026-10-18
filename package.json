@@ -9,6 +9,8 @@
     "lint": "eslint",
     "seed": "tsx src/db/seed.ts",
     "seed:reset": "tsx src/db/seed.ts --reset",
+    "demo:seed": "tsx src/db/seed-demo.ts",
+    "db:reset": "tsx src/db/reset.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage"

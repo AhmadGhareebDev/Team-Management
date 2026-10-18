@@ -141,7 +141,7 @@ export default function ActivityFeed({
   }
 
   return (
-    <section className="rounded-xl border-0 bg-card shadow-sm ring-1 ring-foreground/5">
+    <section className="rounded-none border-0 bg-card shadow-sm ring-1 ring-foreground/5">
       <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
         <div className="flex items-center gap-2">
           <Activity className="size-4 text-muted-foreground" />

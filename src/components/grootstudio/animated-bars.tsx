@@ -112,7 +112,7 @@ export function AnimatedBars({
     return (
         <section
             className={cn(
-                "relative min-h-[400px] w-full flex flex-col items-center justify-center overflow-hidden rounded-lg border border-border bg-background text-foreground",
+                "relative min-h-[400px] w-full flex flex-col items-center justify-center overflow-hidden rounded-none border border-border bg-background text-foreground",
                 className
             )}
             style={backgroundColor ? { backgroundColor } : undefined}

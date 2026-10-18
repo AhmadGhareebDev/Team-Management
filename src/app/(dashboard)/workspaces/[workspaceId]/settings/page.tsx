@@ -13,10 +13,35 @@ import {
 } from "@/components/ui/card"
 import WorkspaceMembersList from "../../_components/WorkspaceMembersList"
 import UpdateWorkspaceInfo from "../../_components/UpdateWorkspaceInfo"
-import { getWorkspaceById } from "@/db/queries/workspaces"
+import { getWorkspaceById, getUserWorkspaceRole } from "@/db/queries/workspaces"
 import { requireWorkspaceManager } from "@/lib/guards"
+import type { Metadata } from "next"
+import { headers } from "next/headers"
+import { auth } from "@/lib/auth"
 
 export const instant = false
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ workspaceId: string }>
+}): Promise<Metadata> {
+  const { workspaceId } = await params
+  const session = await auth.api.getSession({ headers: await headers() })
+
+  if (session) {
+    const role = await getUserWorkspaceRole(workspaceId, session.user.id)
+
+    if (role === "owner" || role === "admin") {
+      const workspace = await getWorkspaceById(workspaceId)
+      return {
+        title: workspace ? `${workspace.name} · Settings` : "Workspace Settings",
+      }
+    }
+  }
+
+  return { title: "Workspace Settings" }
+}
 
 export default async function WorkspaceSettingsPage({
   params,

@@ -194,7 +194,7 @@ export default function NotificationRow({
           )}
         </div>
         {!notification.isRead && (
-          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+          <span className="mt-1.5 size-1.5 shrink-0 rounded-none bg-primary" />
         )}
       </div>
     )
@@ -222,7 +222,7 @@ export default function NotificationRow({
           </p>
         </div>
         {!notification.isRead && (
-          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+          <span className="mt-1.5 size-1.5 shrink-0 rounded-none bg-primary" />
         )}
       </div>
     )
@@ -252,7 +252,7 @@ export default function NotificationRow({
         </p>
       </div>
       {!notification.isRead && (
-        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+        <span className="mt-1.5 size-1.5 shrink-0 rounded-none bg-primary" />
       )}
     </button>
   )

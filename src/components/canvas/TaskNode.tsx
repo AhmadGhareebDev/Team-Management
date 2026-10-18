@@ -55,7 +55,7 @@ function AssigneeAvatar({ assignee, currentUserId }: { assignee: TaskAssignee; c
           alt={displayName}
           initials={getInitials(assignee.user.name)}
           size={24}
-          className="size-6! rounded-full border-0 ring-0 outline-none"
+          className="size-6! rounded-none border-0 ring-0 outline-none"
         />
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={8} className="flex-col items-start gap-0.5 z-50 border-0 outline-none">
@@ -79,7 +79,7 @@ function AssigneeStack({ assignees, currentUserId }: { assignees: TaskAssignee[]
             <AssigneeAvatar key={a.user.id} assignee={a} currentUserId={currentUserId} />
           ))}
           {hiddenCount > 0 && (
-            <div className="group-hover/stack:hidden flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground border-0 ring-0 outline-none">
+            <div className="group-hover/stack:hidden flex size-6 items-center justify-center rounded-none bg-muted text-[10px] font-semibold text-muted-foreground border-0 ring-0 outline-none">
               +{hiddenCount}
             </div>
           )}
@@ -138,7 +138,7 @@ function TaskNodeComponent({ data, selected }: NodeProps) {
 
       <div
         className={cn(
-          "relative w-72 rounded-xl border-0 outline-none bg-card p-4 overflow-hidden",
+          "relative w-72 rounded-none border-0 outline-none bg-card p-4 overflow-hidden",
           isBlocked && "bg-destructive/[0.02]",
           selected && "ring-2 ring-primary/80"
         )}
@@ -176,7 +176,7 @@ function TaskNodeComponent({ data, selected }: NodeProps) {
               }
               aria-label={nextStatus ? `Move task to ${statusLabels[nextStatus]}` : "No further status available"}
               className={cn(
-                "nodrag mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-0 outline-none",
+                "nodrag mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-none border-0 outline-none",
                 isDone
                   ? "bg-emerald-500 text-white"
                   : "bg-background text-muted-foreground hover:text-primary",
@@ -188,10 +188,10 @@ function TaskNodeComponent({ data, selected }: NodeProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className={cn("px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-md border-0 outline-none", statusBadge[task.status])}>
+            <span className={cn("px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-none border-0 outline-none", statusBadge[task.status])}>
               {statusLabels[task.status]}
             </span>
-            <span className={cn("px-2 py-0.5 text-[10px] font-semibold tracking-wider capitalize rounded-md border-0 outline-none", priorityBadge[task.priority])}>
+            <span className={cn("px-2 py-0.5 text-[10px] font-semibold tracking-wider capitalize rounded-none border-0 outline-none", priorityBadge[task.priority])}>
               {task.priority}
             </span>
           </div>
@@ -204,14 +204,14 @@ function TaskNodeComponent({ data, selected }: NodeProps) {
           )}
 
           {isBlocked && pendingBlockers.length > 0 && (
-            <div className="flex items-center gap-1.5 rounded-lg border-0 outline-none bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
+            <div className="flex items-center gap-1.5 rounded-none border-0 outline-none bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
               <AlertCircle className="size-3 shrink-0" />
               <span className="truncate">Blocked by {pendingBlockers.map((d) => d.dependsOn.title).join(", ")}</span>
             </div>
           )}
 
           {overdueBlockers.length > 0 && (
-            <div className="flex items-center gap-1.5 rounded-lg border-0 outline-none bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+            <div className="flex items-center gap-1.5 rounded-none border-0 outline-none bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
               <Clock className="size-3 shrink-0" />
               <span className="truncate">Dependency overdue: {overdueBlockers.map((d) => d.dependsOn.title).join(", ")}</span>
             </div>

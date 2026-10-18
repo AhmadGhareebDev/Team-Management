@@ -6,8 +6,33 @@ import { headers } from "next/headers"
 import { getProjectById, getUserProjectAccess } from "@/db/queries/project"
 import CanvasStage from "@/components/canvas/CanvasStage"
 import { getProjectTasks } from "@/db/queries/task"
+import type { Metadata } from "next"
 
 export const instant = false
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ workspaceId: string; projectId: string }>
+}): Promise<Metadata> {
+  const { workspaceId, projectId } = await params
+  const session = await auth.api.getSession({ headers: await headers() })
+  const project = await getProjectById(projectId)
+
+  if (session && project && project.workspaceId === workspaceId) {
+    const access = await getUserProjectAccess(projectId, session.user.id)
+    const canView =
+      access?.role === "owner" ||
+      access?.role === "admin" ||
+      access?.isProjectMember === true
+
+    if (canView) {
+      return { title: project.name }
+    }
+  }
+
+  return { title: "Project" }
+}
 
 export default async function ProjectCanvasPage({
     params,

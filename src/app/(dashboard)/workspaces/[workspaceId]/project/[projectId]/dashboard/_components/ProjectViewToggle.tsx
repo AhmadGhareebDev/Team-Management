@@ -18,13 +18,13 @@ export default function ProjectViewToggle({
   ]
 
   return (
-    <div className="flex shrink-0 items-center rounded-lg border-0 bg-muted/40 p-1">
+    <div className="flex shrink-0 items-center rounded-none border-0 bg-muted/40 p-1">
       {items.map((item) => (
         <Link
           key={item.key}
           href={item.href}
           className={cn(
-            "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+            "rounded-none px-3 py-1.5 text-xs font-medium transition-colors",
             active === item.key
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"

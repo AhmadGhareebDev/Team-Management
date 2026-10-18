@@ -7,10 +7,31 @@ import { getProjectById, getUserProjectAccess } from "@/db/queries/project"
 import { getProjectDashboardTasks } from "@/db/queries/task"
 import { getProjectStats } from "@/db/queries/stats"
 import ProjectDashboard from "./_components/ProjectDashboard"
+import type { Metadata } from "next"
+
+export const DASHBOARD_TASKS_PER_STATUS = 8
 
 export const instant = false
 
-export const DASHBOARD_TASKS_PER_STATUS = 8
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ workspaceId: string; projectId: string }>
+}): Promise<Metadata> {
+  const { workspaceId, projectId } = await params
+  const session = await auth.api.getSession({ headers: await headers() })
+  const project = await getProjectById(projectId)
+
+  if (session && project && project.workspaceId === workspaceId) {
+    const access = await getUserProjectAccess(projectId, session.user.id)
+
+    if (access?.role === "owner" || access?.role === "admin") {
+      return { title: `${project.name} · Dashboard` }
+    }
+  }
+
+  return { title: "Project Dashboard" }
+}
 
 export default async function ProjectDashboardPage({
     params,

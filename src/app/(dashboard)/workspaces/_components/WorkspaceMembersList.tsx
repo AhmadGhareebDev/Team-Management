@@ -75,7 +75,7 @@ export default async function WorkspaceMembersList({
             defaultValue={search ?? ""}
             placeholder="Search members"
             aria-label="Search members"
-            className="h-9 w-full rounded-md border border-border/60 bg-background pl-7 pr-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-9 w-full rounded-none border border-border/60 bg-background pl-7 pr-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </form>
         <UrlSelect

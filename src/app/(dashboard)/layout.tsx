@@ -3,61 +3,14 @@ import { AppSidebar } from "./_components/app-sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Navbar } from "@/components/web/Navbar"
 import { NotificationsProvider } from "@/components/web/NotificationsProvider"
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
-import {
-  getUserNotifications,
-  getUserNotificationCounts,
-  getDefaultNotificationTab,
-  type NotificationTab,
-} from "@/db/queries/notifications"
-import { PAGE_SIZES } from "@/lib/pagination"
 
-
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const session = await auth.api.getSession({ headers: await headers() })
-
-  let initialTab: NotificationTab = "invitations"
-  let notifications: Awaited<ReturnType<typeof getUserNotifications>>["items"] = []
-  let notificationTotal = 0
-  let counts = { invitations: 0, tasks: 0, members: 0 }
-  let unreadTotal = 0
-
-  if (session) {
-    // No notification scan here on purpose. This used to run on every dashboard
-    // render, which meant overdue and due-soon alerts only ever fired while
-    // somebody happened to have the app open, and it made every page load a
-    // write. /api/cron/notifications owns that now.
-
-    // The default tab depends on the counts, so these two cannot run in
-    // parallel. Seeding the tab we actually open on keeps the server and
-    // client in agreement.
-    const countResult = await getUserNotificationCounts(session.user.id)
-    counts = countResult.total
-    unreadTotal = Object.values(countResult.unread).reduce((sum, n) => sum + n, 0)
-
-    initialTab = getDefaultNotificationTab(countResult.total)
-    const result = await getUserNotifications(session.user.id, {
-      tab: initialTab,
-      limit: PAGE_SIZES.notificationsDropdown,
-    })
-    notifications = result.items
-    notificationTotal = result.total
-  }
-
   return (
-    <NotificationsProvider
-      userId={session?.user.id ?? null}
-      initialTab={initialTab}
-      notifications={notifications}
-      total={notificationTotal}
-      counts={counts}
-      unreadTotal={unreadTotal}
-    >
+    <NotificationsProvider>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>

@@ -7,8 +7,11 @@ export const metadata = {
   description: "Verify your email address to access your account.",
 }
 
-
-export const instant = false;
+/**
+ * The token arrives in the URL and is consumed here, so this page is inherently
+ * per-request and cannot be prerendered into a shared shell.
+ */
+export const instant = false
 
 export default async function VerifyEmail({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams;

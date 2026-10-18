@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Suspense } from "react"
+import { ProfileFormSkeleton } from "@/components/skeletons"
 import DeleteUserAccount from "./_components/DeleteUserAccount"
 import UpdateProfileForm from "./_components/UpdateProfileForm"
 import { ResetPasswordForm } from "./_components/ResetPasswordForm"
@@ -16,6 +17,11 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import  Link  from "next/link"
 import { Button } from "@/components/ui/button"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Settings",
+}
 
 export const instant = false
 
@@ -111,7 +117,7 @@ const session = await auth.api.getSession({ headers: await headers() })
                 avatarUrl={session?.user.avatar_url ?? null}
                 oldAvatarFileId={session?.user.avatar_file_id ?? null}
               />
-              <Suspense fallback={<p>Loading...</p>}>
+              <Suspense fallback={<ProfileFormSkeleton />}>
               <UpdateProfileForm
                 name={session?.user.name ?? "John Doe"}
                 username={session?.user.username ?? "johndoe"}

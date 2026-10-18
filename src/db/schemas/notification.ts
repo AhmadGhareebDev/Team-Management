@@ -23,7 +23,7 @@ export const notification = pgTable("notification", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
   actorId: text("actor_id").references(() => user.id),
-  workspaceId: text("workspace_id").references(() => workspace.id),
+  workspaceId: text("workspace_id").references(() => workspace.id, { onDelete: "cascade" }),
   workspaceInvitationId: text("workspace_invitation_id").references(() => workspaceInvitation.id),
   projectId: text("project_id").references(() => project.id, { onDelete: "cascade" }),
   taskId: text("task_id").references(() => task.id, { onDelete: "cascade" }),

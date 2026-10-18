@@ -7,7 +7,9 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+  partialPrefetching: true,
   images: {
+    qualities: [90],
     remotePatterns: [
       {
         protocol: "https",

@@ -123,7 +123,7 @@ export async function hasNotified({
   return Boolean(existing)
 }
 
-const OVERDUE_WINDOW_MS = 24 * 60 * 60 * 1000
+const DUE_SOON_WINDOW_MS = 48 * 60 * 60 * 1000
 
 export async function clearTaskDateNotifications(taskId: string) {
     await db.delete(notification).where(
@@ -138,7 +138,7 @@ export async function clearTaskDateNotifications(taskId: string) {
 }
 
 /**
- * Detects tasks that became overdue, deadlines approaching within the next 24h,
+ * Detects tasks that became overdue, deadlines approaching within the next 48h,
  * tasks blocked by an overdue dependency (Dependency Overdue flag), and
  * dependencies that got back on track. Notifications are created once per
  * (user, task, type) so repeated scans are idempotent, which is what makes it
@@ -242,7 +242,7 @@ export async function runNotificationsScan() {
     t.dueDate != null &&
     t.status !== "done" &&
     new Date(t.dueDate).getTime() > now &&
-    new Date(t.dueDate).getTime() <= now + OVERDUE_WINDOW_MS
+    new Date(t.dueDate).getTime() <= now + DUE_SOON_WINDOW_MS
 
   const workspaceName = (projectId: string) =>
     workspaceNameById.get(workspaceByProjectId.get(projectId) ?? "") ?? ""
