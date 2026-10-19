@@ -135,7 +135,7 @@ export default function Login() {
     }
 
     return (
-        <Card className="w-lg">
+        <Card className="w-full max-w-lg">
          <CardHeader>
             <CardTitle>Log In</CardTitle>
             <CardDescription>

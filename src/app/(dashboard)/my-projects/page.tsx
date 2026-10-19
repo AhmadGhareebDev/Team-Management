@@ -19,7 +19,7 @@ export default async function MyProjectsPage({
   const listKey = searchParamsKey(resolvedSearchParams)
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-6 max-sm:p-0">
       <div className="flex items-center justify-between border-b border-border/40 pb-4">
         <h1 className="font-serif text-2xl font-bold tracking-tight text-foreground">
           My Projects

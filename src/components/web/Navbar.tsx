@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { NotificationsDropdown } from "./NotificationsDropdown"
@@ -48,9 +49,21 @@ export function Navbar({
               type="button"
               disabled={isSignOutPending}
               onClick={handleSignOut}
+              className="max-sm:hidden"
             >
               {isSignOutPending && <Spinner data-icon="inline-start" />}
               Log out
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              type="button"
+              disabled={isSignOutPending}
+              onClick={handleSignOut}
+              aria-label="Log out"
+              className="sm:hidden"
+            >
+              {isSignOutPending ? <Spinner className="size-4" /> : <LogOut className="size-4" />}
             </Button>
           </>
         ) : (

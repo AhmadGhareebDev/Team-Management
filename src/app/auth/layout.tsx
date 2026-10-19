@@ -15,7 +15,7 @@ export default function AuthLayout({
                     Go Back
                 </Link>
             </div>
-            <div className="w-full max-w-md mx-auto py-6">
+            <div className="w-full max-w-md mx-auto py-6 px-4">
             {children}
             </div>
         </div>

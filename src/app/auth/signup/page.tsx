@@ -83,7 +83,7 @@ export default function SignUp() {
 
 
    return (
-        <Card className="w-lg">
+        <Card className="w-full max-w-lg">
          <CardHeader>
             <CardTitle>Sign Up</CardTitle>
             <CardDescription>

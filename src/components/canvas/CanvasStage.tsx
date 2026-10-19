@@ -567,6 +567,9 @@ export default function CanvasStage({
     <div className="relative h-full w-full bg-background select-none cursor-default overflow-hidden">
       {realtimeElements}
       <style>{`
+        .react-flow {
+          touch-action: none;
+        }
         .react-flow__pane {
           cursor: grab !important;
         }
@@ -582,7 +585,7 @@ export default function CanvasStage({
         }`}
       >
         <div className="flex justify-center px-4 pt-4 pointer-events-none">
-          <div className="relative pointer-events-auto flex w-full max-w-3xl flex-wrap items-center gap-3 rounded-none border-0 bg-card px-4 py-2 transition-colors">
+          <div className="relative pointer-events-auto flex w-full max-w-3xl flex-wrap items-center gap-3 rounded-none border-0 bg-card px-4 py-2 transition-colors max-sm:px-3 max-sm:gap-2">
             <Link
               href={`/workspaces/${workspaceId}`}
               className={buttonVariants({ variant: "ghost", size: "icon-sm", className: "rounded-none hover:bg-accent text-muted-foreground hover:text-foreground shrink-0" })}

@@ -16,6 +16,7 @@ export default function InviteUser({ workspaceId, role }: { workspaceId: string,
             <Button
                 variant="outline"
                 size="sm"
+                className="max-sm:h-8 max-sm:px-3 max-sm:text-xs"
                 onClick={() =>
                     require({
                         role,

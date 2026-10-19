@@ -81,7 +81,7 @@ export function CreateWorkSpace() {
       trigger={
         <Button 
         size="sm" 
-        className="gap-1.5 shadow-sm transition-all hover:shadow"
+        className="gap-1.5 shadow-sm transition-all hover:shadow max-sm:h-8 max-sm:px-3 max-sm:text-xs"
       >
         <Plus className="size-4" />
         <span>New Workspace</span>
