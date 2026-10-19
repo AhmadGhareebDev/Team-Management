@@ -7,7 +7,7 @@ const LINKS = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-border px-6 py-10">
+    <footer className="border-t border-border px-4 py-10 sm:px-6">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
         <span className="text-sm font-semibold uppercase tracking-widest text-foreground">
           Team Management

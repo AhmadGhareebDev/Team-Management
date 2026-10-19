@@ -137,7 +137,7 @@ export default function TaskDetailsPanel({
   if (!open) return null
 
   return (
-    <aside className="absolute top-0 right-0 z-40 flex h-full w-80 flex-col border-0 bg-card">
+    <aside className="absolute top-0 right-0 z-40 flex h-full w-80 flex-col border-0 bg-card max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:h-auto max-md:max-h-[80dvh] max-md:w-full max-md:border-t">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-0 border-b border-border/50 bg-muted/30 px-4 py-3">
         <div className="min-w-0 flex-1 pr-2">

@@ -180,7 +180,7 @@ export default async function MyTasksList({
         </div>
       ) : (
         <>
-          <div className="grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto scrollbar-thin sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:max-h-[60vh] md:overflow-y-auto scrollbar-thin sm:grid-cols-2 lg:grid-cols-3">
             {tasks.map((task) => (
               <UserTaskCard key={task.id} task={task} />
             ))}

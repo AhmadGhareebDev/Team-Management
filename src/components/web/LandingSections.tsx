@@ -115,7 +115,7 @@ function LandingSection({
 
 export function LandingSections() {
   return (
-    <section className="w-full px-6">
+    <section className="w-full px-4 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-24 py-24">
         {FEATURES.map((feature, index) => (
           <LandingSection

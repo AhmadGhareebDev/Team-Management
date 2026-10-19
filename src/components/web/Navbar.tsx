@@ -33,7 +33,7 @@ export function Navbar({
         href="/"
         className="text-sm font-semibold tracking-widest text-foreground uppercase"
       >
-        Team Managment
+        Team Management
       </Link>
       <div className="ml-auto flex items-center gap-2">
         {isPending ? (

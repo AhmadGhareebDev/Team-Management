@@ -94,7 +94,7 @@ export default async function ProjectCanvasPage({
             : null
 
     return (
-        <div className="-m-6 h-[calc(100dvh-3.5rem)] overflow-hidden">
+        <div className="-m-6 max-sm:-m-4 h-[calc(100dvh-3.5rem)] overflow-hidden">
             <CanvasStage
                 tasks={tasks}
                 projectId={projectId}

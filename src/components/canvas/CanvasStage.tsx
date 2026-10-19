@@ -56,6 +56,7 @@ import TaskNode, { type TaskNodeData, type OptimisticApi } from "@/components/ca
 import TaskDetailsPanel from "@/components/canvas/TaskDetailsPanel"
 import { AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
+import { cn } from "@/lib/utils"
 
 const MAX_MEMBERS = 4
 
@@ -117,6 +118,7 @@ export default function CanvasStage({
   const router = useRouter()
   const isManager = role === "owner" || role === "admin"
   const [isBarVisible, setIsBarVisible] = useState(true)
+  const [isMembersOpen, setIsMembersOpen] = useState(false)
 
   const [isCreatePending, startCreateTransition] = useTransition()
   const [, startDragTransition] = useTransition()
@@ -580,7 +582,7 @@ export default function CanvasStage({
         }`}
       >
         <div className="flex justify-center px-4 pt-4 pointer-events-none">
-          <div className="relative pointer-events-auto flex w-full max-w-3xl items-center gap-3 rounded-none border-0 bg-card px-4 py-2 transition-colors">
+          <div className="relative pointer-events-auto flex w-full max-w-3xl flex-wrap items-center gap-3 rounded-none border-0 bg-card px-4 py-2 transition-colors">
             <Link
               href={`/workspaces/${workspaceId}`}
               className={buttonVariants({ variant: "ghost", size: "icon-sm", className: "rounded-none hover:bg-accent text-muted-foreground hover:text-foreground shrink-0" })}
@@ -611,26 +613,41 @@ export default function CanvasStage({
             </div>
 
             {project.members.length > 0 && (
-              <div className="group/members relative z-20 shrink-0">
-                <AvatarGroup>
-                  {project.members.slice(0, MAX_MEMBERS).map((m) => (
-                    <ImageKitAvatar
-                      key={m.user.id}
-                      src={m.user.avatar_url}
-                      alt={m.user.name}
-                      initials={getInitials(m.user.name)}
-                      size={24}
-                      className="size-6 rounded-full ring-2 ring-card"
-                    />
-                  ))}
-                  {project.members.length > MAX_MEMBERS && (
-                    <AvatarGroupCount className="bg-muted text-muted-foreground ring-2 ring-card text-[10px]">
-                      +{project.members.length - MAX_MEMBERS}
-                    </AvatarGroupCount>
-                  )}
-                </AvatarGroup>
+              <div className="group/members relative z-20 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => setIsMembersOpen((open) => !open)}
+                  aria-label="Show project members"
+                  aria-expanded={isMembersOpen}
+                  className="flex cursor-pointer"
+                >
+                  <AvatarGroup>
+                    {project.members.slice(0, MAX_MEMBERS).map((m) => (
+                      <ImageKitAvatar
+                        key={m.user.id}
+                        src={m.user.avatar_url}
+                        alt={m.user.name}
+                        initials={getInitials(m.user.name)}
+                        size={24}
+                        className="size-6 rounded-full ring-2 ring-card"
+                      />
+                    ))}
+                    {project.members.length > MAX_MEMBERS && (
+                      <AvatarGroupCount className="bg-muted text-muted-foreground ring-2 ring-card text-[10px]">
+                        +{project.members.length - MAX_MEMBERS}
+                      </AvatarGroupCount>
+                    )}
+                  </AvatarGroup>
+                </button>
 
-                <div className="invisible absolute top-full right-0 z-30 mt-3 min-w-56 rounded-none border-0 bg-popover p-2 opacity-0 transition-opacity group-hover/members:visible group-hover/members:opacity-100">
+                <div
+                  className={cn(
+                    "absolute top-full right-0 z-30 mt-3 min-w-56 rounded-none border-0 bg-popover p-2 transition-opacity",
+                    isMembersOpen
+                      ? "visible opacity-100"
+                      : "invisible opacity-0 group-hover/members:visible group-hover/members:opacity-100"
+                  )}
+                >
                   <p className="px-2 pt-1 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                     {project.members.length} {project.members.length === 1 ? "member" : "members"}
                   </p>
@@ -658,12 +675,12 @@ export default function CanvasStage({
             )}
 
             {isManager && (
-              <form onSubmit={form.handleSubmit(handleAddTask)} className="flex shrink-0 items-center gap-1.5 pl-2 border-l border-border/60">
+              <form onSubmit={form.handleSubmit(handleAddTask)} className="flex shrink-0 items-center gap-1.5 pl-2 border-l border-border/60 max-sm:order-last max-sm:w-full max-sm:border-l-0 max-sm:pl-0">
                 <div className="relative">
                   <Input
                     {...form.register("title")}
                     placeholder="New task..."
-                    className="h-7 w-36 rounded-none bg-background/60 px-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring border-border/60"
+                    className="h-7 w-36 rounded-none bg-background/60 px-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring border-border/60 max-md:flex-1 max-md:w-auto"
                   />
                   {form.formState.errors.title && (
                     <FieldError

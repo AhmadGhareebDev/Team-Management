@@ -65,7 +65,7 @@ export default async function WorkspacesList({
         </div>
       ) : (
         <>
-          <div className="grid max-h-[60vh] grid-cols-1 gap-6 overflow-y-auto scrollbar-thin sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:max-h-[60vh] md:overflow-y-auto scrollbar-thin sm:grid-cols-2 lg:grid-cols-3">
             {workspaces.map((workspace) => (
               <WorkSpaceCard key={workspace.id} workspace={workspace} />
             ))}
