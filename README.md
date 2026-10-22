@@ -11,7 +11,7 @@ pagination that happens in the database rather than in memory.
 
 ## Demo
 
-Add your deployed URL here.
+https://team-management-livid.vercel.app
 
 The seed script creates four accounts. The password is the same for all of
 them, and the emails are deliberately fake domains so nothing can be sent to
@@ -86,6 +86,8 @@ notification bell update in realtime.
 
 A few decisions that are worth knowing about before reading the code.
 
+![System architecture](docs/images/sys.png)
+
 **Blocked status is derived, not stored by the client.** When a dependency is
 completed or removed, the affected tasks have to be re-evaluated. That is done
 in a single `UPDATE ... FROM (SELECT ...)` statement — see `syncTaskBlocked` in
@@ -112,6 +114,22 @@ is indistinguishable from one that does not exist.
 **Pagination is in the database.** Every list view takes a page and a page size
 and does a `LIMIT`/`OFFSET` with a matching `COUNT`, rather than fetching
 everything and slicing it.
+
+## Data model
+
+![Database schema](docs/images/database.png)
+
+The core model is **workspace → project → task**, with two layers of membership:
+a workspace role (owner/admin/member) on `workspace_members`, and a separate
+project-level membership on `project_members`. The dependency graph lives in
+`task_dependencies`, where the unique pair `(task_id, depends_on_id)` is the
+concurrency guarantee against duplicate or cycle edges — application logic and
+that index together prevent a task from blocking itself or creating a cycle.
+
+Notifications and activity are append-only signals scoped to a workspace. Two
+unique indexes make notification creation idempotent: one per
+`(user_id, task_id, type)` (NULL-safe), and one per `workspace_invitation_id`
+so re-inviting updates rather than stacks rows.
 
 ## Getting started
 
