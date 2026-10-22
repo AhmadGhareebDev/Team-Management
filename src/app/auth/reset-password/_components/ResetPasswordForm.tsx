@@ -54,9 +54,9 @@ export default function ResetPasswordForm({token}: { token: string }) {
 
 
     return (
-    <Card className="w-sm">
+    <Card className="w-full">
         <CardHeader>
-            <CardTitle>Reset Password</CardTitle>
+            <CardTitle><h1 className="text-inherit">Reset Password</h1></CardTitle>
             <CardDescription>Enter your new password below.</CardDescription>
         </CardHeader>
         <CardContent>

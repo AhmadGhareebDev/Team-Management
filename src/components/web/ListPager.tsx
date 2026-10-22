@@ -55,7 +55,7 @@ export default function ListPager({
   const linkClass = buttonVariants({ variant: "outline", size: "sm" })
 
   return (
-    <div className="flex items-center justify-between gap-3 pt-1">
+    <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-xs text-muted-foreground">
         Page {current} of {pages} · {total} {total === 1 ? noun.replace(/s$/, "") : noun}
       </span>
@@ -64,7 +64,7 @@ export default function ListPager({
         {current <= 1 ? (
           <span
             aria-disabled
-            className={cn(linkClass, "pointer-events-none opacity-50")}
+            className={cn(linkClass, "pointer-events-none flex-1 justify-center opacity-50 sm:flex-none")}
           >
             <ChevronLeft className="size-4" aria-hidden />
             Prev
@@ -74,7 +74,7 @@ export default function ListPager({
             href={hrefFor(current - 1)}
             prefetch
             scroll
-            className={linkClass}
+            className={cn(linkClass, "flex-1 justify-center sm:flex-none")}
             aria-label="Previous page"
           >
             <ChevronLeft className="size-4" aria-hidden />
@@ -85,7 +85,7 @@ export default function ListPager({
         {current >= pages ? (
           <span
             aria-disabled
-            className={cn(linkClass, "pointer-events-none opacity-50")}
+            className={cn(linkClass, "pointer-events-none flex-1 justify-center opacity-50 sm:flex-none")}
           >
             Next
             <ChevronRight className="size-4" aria-hidden />
@@ -95,7 +95,7 @@ export default function ListPager({
             href={hrefFor(current + 1)}
             prefetch
             scroll
-            className={linkClass}
+            className={cn(linkClass, "flex-1 justify-center sm:flex-none")}
             aria-label="Next page"
           >
             Next

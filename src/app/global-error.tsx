@@ -15,18 +15,18 @@ export default function GlobalError({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="flex min-h-svh items-center justify-center p-6">
           <div className="flex max-w-md flex-col items-center gap-4 text-center">
-            <h2 className="font-serif text-xl font-semibold">
+            <h1 className="font-serif text-xl font-semibold">
               The application failed to load
-            </h2>
+            </h1>
             <p className="text-sm text-muted-foreground">
               Something broke outside of a single page. Reloading usually
               clears it.
             </p>
 
             {error.digest && (
-              <p className="font-mono text-[11px] text-muted-foreground/60">
+              <p className="font-mono text-xs text-muted-foreground">
                 Reference: {error.digest}
               </p>
             )}

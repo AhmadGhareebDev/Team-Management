@@ -1,11 +1,20 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useId, useMemo, useRef } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+
+let fieldControlSeq = 0
+
+function fieldControlOf(root: HTMLElement | null) {
+  return root?.querySelector<HTMLElement>(
+    "input, textarea, select, [role='combobox']"
+  )
+}
+
 
 function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
   return (
@@ -74,8 +83,21 @@ function Field({
   orientation = "vertical",
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const root = ref.current
+    if (!root) return
+    const label = root.querySelector<HTMLLabelElement>('label[data-slot="field-label"]')
+    const control = fieldControlOf(root)
+    if (!label || !control || label.htmlFor) return
+    if (!control.id) control.id = `field-control-${++fieldControlSeq}`
+    label.htmlFor = control.id
+  }, [])
+
   return (
     <div
+      ref={ref}
       role="group"
       data-slot="field"
       data-orientation={orientation}
@@ -177,10 +199,46 @@ function FieldError({
   className,
   children,
   errors,
+  id,
   ...props
 }: React.ComponentProps<"div"> & {
   errors?: Array<{ message?: string } | undefined>
 }) {
+  const generatedId = useId()
+  const errorId = id ?? `field-error-${generatedId.replace(/:/g, "")}`
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const control = fieldControlOf(
+      el.closest<HTMLElement>('[data-slot="field"]')
+    )
+    if (!control) return
+    const describedById = el.id
+    const current = control.getAttribute("aria-describedby")
+    const ids = current?.split(/\s+/).filter(Boolean) ?? []
+    if (!ids.includes(describedById)) {
+      control.setAttribute(
+        "aria-describedby",
+        [...ids, describedById].join(" ")
+      )
+    }
+    control.setAttribute("aria-invalid", "true")
+
+    return () => {
+      const rest = (control.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .filter((value) => value && value !== describedById)
+      if (rest.length > 0) {
+        control.setAttribute("aria-describedby", rest.join(" "))
+      } else {
+        control.removeAttribute("aria-describedby")
+      }
+      control.removeAttribute("aria-invalid")
+    }
+  }, [])
+
   const content = useMemo(() => {
     if (children) {
       return children
@@ -214,6 +272,8 @@ function FieldError({
 
   return (
     <div
+      ref={ref}
+      id={errorId}
       role="alert"
       data-slot="field-error"
       className={cn("text-sm font-normal text-destructive", className)}

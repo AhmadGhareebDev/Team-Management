@@ -141,7 +141,7 @@ export default function TaskDetailsPanel({
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-0 border-b border-border/50 bg-muted/30 px-4 py-3">
         <div className="min-w-0 flex-1 pr-2">
-          <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Task Details</p>
+          <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Task Details</p>
           <p className="truncate text-sm font-semibold text-foreground leading-snug">{task.title}</p>
         </div>
         <Button 
@@ -159,7 +159,7 @@ export default function TaskDetailsPanel({
       <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin">
         {/* Status Section */}
         <div className="space-y-2">
-          <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Status</p>
+          <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Status</p>
           <div className="flex items-center justify-between gap-2 rounded-none border-0 bg-muted/20 p-2.5">
             {canPickStatus ? (
               <Select value={task.status} onValueChange={handleStatusChange}>
@@ -176,7 +176,7 @@ export default function TaskDetailsPanel({
                       return (
                         <span
                           className={cn(
-                            "rounded-none border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase",
+                            "rounded-none border px-2 py-0.5 text-[11px] font-semibold tracking-wider uppercase",
                             statusBadge[shown]
                           )}
                         >
@@ -200,16 +200,16 @@ export default function TaskDetailsPanel({
                 </SelectContent>
               </Select>
             ) : (
-              <span className={cn("rounded-none border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase", statusBadge[task.status])}>
+              <span className={cn("rounded-none border px-2 py-0.5 text-[11px] font-semibold tracking-wider uppercase", statusBadge[task.status])}>
                 {statusLabels[task.status]}
               </span>
             )}
             {isBlocked ? (
-              <p className="text-[10px] font-medium text-destructive truncate max-w-[140px]" title={`Blocked by ${pendingBlockers.map((d) => d.dependsOn.title).join(", ")}`}>
+              <p className="text-[11px] font-medium text-destructive truncate max-w-[140px]" title={`Blocked by ${pendingBlockers.map((d) => d.dependsOn.title).join(", ")}`}>
                 Blocked by {pendingBlockers.map((d) => d.dependsOn.title).join(", ")}
               </p>
             ) : !canToggleStatus ? (
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 {task.assignees.length === 0
                   ? "Assign someone to move this task"
                   : "Assignees only"}
@@ -219,7 +219,7 @@ export default function TaskDetailsPanel({
 
           {/* Blocked Alerts */}
           {overdueBlockers.length > 0 && (
-            <div className="flex items-center gap-2 rounded-none border-0 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+            <div className="flex items-center gap-2 rounded-none border-0 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
               <Clock className="size-3.5 shrink-0" />
               <span className="leading-tight">
                 Dependency overdue: {overdueBlockers.map((d) => d.dependsOn.title).join(", ")}
@@ -230,7 +230,7 @@ export default function TaskDetailsPanel({
 
         {/* Details Form */}
         <form onSubmit={detailsForm.handleSubmit(handleSave)} className="space-y-3">
-          <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Details</p>
+          <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Details</p>
 
           <Input 
             {...detailsForm.register("title")} 
@@ -294,7 +294,7 @@ export default function TaskDetailsPanel({
 
         {/* Assignees Section */}
         <div className="space-y-2">
-          <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Assignees</p>
+          <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Assignees</p>
           <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-none border border-border/50 bg-muted/20 p-1.5 scrollbar-thin">
             {members.length === 0 && (
               <p className="px-2 py-1.5 text-xs text-muted-foreground">No members in this project yet.</p>
@@ -322,7 +322,7 @@ export default function TaskDetailsPanel({
                   />
                   <div className="min-w-0 flex-1 leading-tight">
                     <p className="truncate text-xs">{m.user.id === currentUserId ? "You" : m.user.name}</p>
-                    <p className="truncate text-[10px] text-muted-foreground">@{m.user.username}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">@{m.user.username}</p>
                   </div>
                   {isManager && selectedItem && (
                     <Check className="size-3.5 text-primary shrink-0" />

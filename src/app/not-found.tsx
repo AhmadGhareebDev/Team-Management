@@ -10,16 +10,16 @@ import { SearchX } from "lucide-react"
  */
 export default function NotFound() {
   return (
-    <div className="flex h-full items-center justify-center p-6">
+    <div className="flex min-h-[50vh] items-center justify-center p-6">
       <div className="flex max-w-md flex-col items-center gap-4 text-center">
         <div className="flex size-12 items-center justify-center rounded-none bg-muted">
           <SearchX className="size-6 text-muted-foreground" />
         </div>
 
         <div className="space-y-1.5">
-          <h2 className="font-serif text-xl font-semibold text-foreground">
+          <h1 className="font-serif text-xl font-semibold text-foreground">
             Page not found
-          </h2>
+          </h1>
           <p className="text-sm text-muted-foreground">
             This page doesn&apos;t exist, or you don&apos;t have access to it.
           </p>

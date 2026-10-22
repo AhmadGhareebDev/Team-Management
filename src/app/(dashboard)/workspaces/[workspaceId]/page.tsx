@@ -16,6 +16,7 @@ import { WorkspaceRealtimeBridge } from "@/components/web/WorkspaceRealtimeBridg
 import { ProjectsGridSkeleton, MemberListSkeleton } from "@/components/skeletons"
 import { searchParamsKey } from "@/lib/pagination"
 import { Suspense } from "react"
+import { PageHeader } from "@/components/web/PageHeader"
 
 export const instant = false
 
@@ -55,25 +56,30 @@ export default async function WorkspaceDetailsPage({
   }
 
   return (
-    <div className="space-y-6 pt-2">
+    <div className="space-y-6">
       <WorkspaceRealtimeBridge workspaceId={workspaceId} />
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/workspaces" className={buttonVariants({ variant: "ghost", size: "icon-sm" })}>
+      <PageHeader
+        title={workspace.name}
+        description="Projects and members in this workspace."
+        back={
+          <Link
+            href="/workspaces"
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            aria-label="Back to workspaces"
+          >
             <ArrowLeft className="size-4" />
           </Link>
-          <h1 className="font-serif text-3xl font-semibold text-foreground">
-            {workspace.name}
-          </h1>
-        </div>
-        <Link
-          href={`/workspaces/${workspaceId}/settings`}
-          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-          aria-label="Workspace settings"
-        >
-          <Settings className="size-4" />
-        </Link>
-      </div>
+        }
+        actions={
+          <Link
+            href={`/workspaces/${workspaceId}/settings`}
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            aria-label="Workspace settings"
+          >
+            <Settings className="size-4" />
+          </Link>
+        }
+      />
 
       <div className="grid items-start gap-6 md:grid-cols-12">
         <div className="space-y-4 md:col-span-8">

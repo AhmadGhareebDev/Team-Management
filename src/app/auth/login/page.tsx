@@ -1,5 +1,5 @@
 "use client"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { insertLoginUserSchema , InsertLoginUserSchemaType , emailValidator } from "@/db/validations"
 import { Controller , useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -135,17 +135,17 @@ export default function Login() {
     }
 
     return (
-        <Card className="w-full max-w-lg">
+        <Card className="w-full">
          <CardHeader>
-            <CardTitle>Log In</CardTitle>
+            <CardTitle><h1 className="text-inherit">Log In</h1></CardTitle>
             <CardDescription>
-               Welcome back! Please enter your credentials to access your account.
+               Welcome back. Enter your credentials to access your account.
             </CardDescription>
          </CardHeader>
         
          <CardContent>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-               <FieldGroup className="gap-7">
+               <FieldGroup className="gap-5">
                    <Controller name="email" control={form.control} render={({field , fieldState}) => (
                       <Field>
                             <FieldLabel>Email</FieldLabel>
@@ -169,37 +169,34 @@ export default function Login() {
                    <Controller name="password" control={form.control} render={({field , fieldState}) => (
                       <Field>
                            <FieldLabel>Password</FieldLabel>
-                            <Input className="px-2"  placeholder="••••••••" {...field} />
-                             <div className="flex w-full items-start justify-between mt-1.5 ">
-                               <div className="max-w-75">
+                            <Input placeholder="••••••••" {...field} />
+                             <div className="flex flex-col-reverse gap-1 sm:flex-row sm:items-start sm:justify-between">
+                               <div className="min-w-0">
                                   {fieldState.invalid && (
                                      <FieldError errors={[fieldState.error]} />
                                   )}
                                </div>
-                               <button type="button"  className="text-sm text-primary hover:underline" onClick={onForgotPassword} disabled={isActive}>
+                               <button type="button" className="shrink-0 text-sm text-primary hover:underline" onClick={onForgotPassword} disabled={isActive}>
                                   {isActive ? `Resend code in ${secondsLeft}s` : "Forgot password?"}
                                </button>
                                </div>
                       </Field>     
                    )} />
                 </FieldGroup>
-                <Button type="submit" className="w-full mt-4" disabled={isLoginPending}>
+                {form.formState.errors.root && (
+                   <p className="mt-4 text-center text-sm text-destructive">
+                      {form.formState.errors.root.message}
+                   </p>
+                )}
+                <Button type="submit" className="mt-5 w-full" disabled={isLoginPending}>
                    {isLoginPending ? <Spinner data-icon="inline-start" /> : <></>}
-                   {isLoginPending ? "Logging in..." : "Login"}
+                   {isLoginPending ? "Logging in..." : "Log in"}
                 </Button>
              </form>
-             <p className="mt-4 text-center text-sm text-muted-foreground">
+             <p className="mt-5 text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
-                <Link href="/auth/signup" className="font-medium text-primary hover:underline">Sign up</Link>
+                <Link href="/auth/signup" className="font-medium text-primary underline-offset-4 hover:underline">Sign up</Link>
              </p>
-             
-            <CardFooter className="flex flex-col items-center mt-5">
-                {form.formState.errors.root && (
-                <p className="text-red-400 text-center text-sm">
-                    {form.formState.errors.root.message}
-                </p>
-                    )}
-            </CardFooter>
          </CardContent>
 
         </Card>

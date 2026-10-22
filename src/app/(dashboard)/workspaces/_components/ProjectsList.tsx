@@ -15,6 +15,9 @@ import { PAGE_SIZES, toParams } from "@/lib/pagination"
 import ListPager from "@/components/web/ListPager"
 import UrlSelect from "@/components/web/UrlSelect"
 import type { UrlSelectOption } from "@/components/web/UrlSelect"
+import { EmptyState } from "@/components/web/EmptyState"
+import { FolderKanban } from "lucide-react"
+import { CreateProject } from "./CreateProject"
 
 const HEALTH_OPTIONS: UrlSelectOption[] = [
   { value: "all", label: "All health" },
@@ -64,7 +67,11 @@ export default async function ProjectList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        role="group"
+        aria-label="Filter and sort projects"
+        className="flex flex-wrap items-center gap-2"
+      >
         <UrlSelect
           param="health"
           value={health}
@@ -82,9 +89,24 @@ export default async function ProjectList({
       </div>
 
       {projects.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">
-          No projects match these filters.
-        </p>
+        <EmptyState
+          icon={FolderKanban}
+          title={
+            total === 0
+              ? "No projects in this workspace yet"
+              : "No projects match these filters"
+          }
+          description={
+            total === 0
+              ? "Create a project to give your team a place to plan and track work."
+              : "Try clearing a filter or two."
+          }
+          action={
+            total === 0 ? (
+              <CreateProject workspaceId={workspaceId} role={role} />
+            ) : undefined
+          }
+        />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

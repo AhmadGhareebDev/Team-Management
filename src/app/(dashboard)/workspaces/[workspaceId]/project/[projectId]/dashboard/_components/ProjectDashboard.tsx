@@ -10,6 +10,7 @@ import {
   ProjectProgressBar,
 } from "@/components/web/ProjectStats"
 import ProjectViewToggle from "./ProjectViewToggle"
+import { PageHeader } from "@/components/web/PageHeader"
 import { cn } from "@/lib/utils"
 import {
   formatDueDate,
@@ -48,11 +49,13 @@ function StatTile({
   accent?: boolean
 }) {
   return (
-    <div className="rounded-none border-0 bg-card p-4 shadow-sm ring-1 ring-foreground/5">
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="flex flex-col gap-1 bg-card p-4 shadow-sm ring-1 ring-foreground/5">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        {label}
+      </p>
       <p
         className={cn(
-          "mt-1 font-serif text-2xl font-bold tracking-tight",
+          "font-serif text-2xl font-bold tracking-tight tabular-nums",
           accent ? "text-destructive" : "text-foreground"
         )}
       >
@@ -93,7 +96,7 @@ function DashboardTaskRow({
       </div>
 
       {isBlocked && (
-        <div className="flex items-start gap-1.5 rounded-none border border-destructive/20 bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
+        <div className="flex items-start gap-1.5 rounded-none border border-destructive/20 bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">
           <AlertCircle className="mt-0.5 size-3 shrink-0" />
           <span className="min-w-0 break-words">
             Blocked by{" "}
@@ -108,7 +111,7 @@ function DashboardTaskRow({
         {task.dueDate ? (
           <span
             className={cn(
-              "flex items-center gap-1.5 text-[11px] font-medium",
+              "flex items-center gap-1.5 text-xs font-medium",
               overdue ? "text-destructive" : "text-muted-foreground"
             )}
           >
@@ -117,7 +120,7 @@ function DashboardTaskRow({
             {formatDueDate(task.dueDate)}
           </span>
         ) : (
-          <span className="text-[11px] text-muted-foreground/60">No due date</span>
+          <span className="text-xs text-muted-foreground">No due date</span>
         )}
 
         {task.assignees.length > 0 && (
@@ -172,11 +175,11 @@ function StatusColumn({
       </div>
 
       {tasks.length === 0 ? (
-        <p className="rounded-none border-0 bg-muted/40 px-3 py-4 text-center text-[11px] text-muted-foreground">
+        <p className="rounded-none border-0 bg-muted/40 px-3 py-4 text-center text-xs text-muted-foreground">
           No tasks
         </p>
       ) : (
-        <div className="flex max-h-80 flex-col gap-2 overflow-y-auto scrollbar-thin pr-0.5">
+        <div className="flex flex-col gap-2 md:max-h-80 md:overflow-y-auto md:pr-0.5">
           {tasks.map((task) => (
             <DashboardTaskRow
               key={task.id}
@@ -191,7 +194,7 @@ function StatusColumn({
       {hidden > 0 && (
         <Link
           href={`/workspaces/${workspaceId}/project/${projectId}`}
-          className="text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+          className="text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           +{hidden} more on the canvas
         </Link>
@@ -230,9 +233,11 @@ export default function ProjectDashboard({
   }
 
   return (
-    <div className="space-y-6 pt-2">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
+    <div className="space-y-6">
+      <PageHeader
+        title={project.name}
+        description={project.description ?? "Project dashboard"}
+        back={
           <Link
             href={`/workspaces/${workspaceId}`}
             className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
@@ -240,24 +245,15 @@ export default function ProjectDashboard({
           >
             <ArrowLeft className="size-4" />
           </Link>
-          <div className="min-w-0">
-            <h1 className="truncate font-serif text-3xl font-semibold text-foreground">
-              {project.name}
-            </h1>
-            {project.description && (
-              <p className="truncate text-sm text-muted-foreground">
-                {project.description}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <ProjectViewToggle
-          workspaceId={workspaceId}
-          projectId={project.id}
-          active="dashboard"
-        />
-      </div>
+        }
+        actions={
+          <ProjectViewToggle
+            workspaceId={workspaceId}
+            projectId={project.id}
+            active="dashboard"
+          />
+        }
+      />
 
       <section className="grid gap-4 md:grid-cols-12">
         <Card className="border-0 bg-card md:col-span-5">

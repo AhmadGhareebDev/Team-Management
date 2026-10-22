@@ -301,14 +301,14 @@ function MemberAssignmentsPanel({
                   <span className="block truncate text-xs font-medium text-foreground">
                     {a.title}
                   </span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
+                  <span className="block truncate text-xs text-muted-foreground">
                     {a.projectName}
                   </span>
                 </span>
                 {a.dueDate && (
                   <span
                     className={cn(
-                      "shrink-0 text-[11px] font-medium",
+                      "shrink-0 text-xs font-medium",
                       isOverdue(a.dueDate, a.status)
                         ? "text-destructive"
                         : "text-muted-foreground"
@@ -324,7 +324,7 @@ function MemberAssignmentsPanel({
       )}
 
       {assignments.total > items.length && (
-        <p className="mt-1.5 pl-2 text-[11px] text-muted-foreground/80">
+        <p className="mt-1.5 pl-2 text-xs text-muted-foreground">
           Showing {items.length} of {assignments.total} active tasks
         </p>
       )}

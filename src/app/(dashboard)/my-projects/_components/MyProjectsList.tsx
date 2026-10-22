@@ -15,6 +15,7 @@ import { getProjectStats, getProgressPct, getProjectHealth } from "@/db/queries/
 import { Button } from "@/components/ui/button"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
 import ProjectCard from "../../workspaces/_components/ProjectCard"
+import { EmptyState } from "@/components/web/EmptyState"
 
 const HEALTH_OPTIONS: UrlSelectOption[] = [
   { value: "all", label: "All health" },
@@ -36,7 +37,7 @@ export default async function MyProjectsList({
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-4 py-16">
+      <div className="flex flex-col items-center justify-center gap-4 py-16">
         <p className="text-sm text-muted-foreground">
           You need to be logged in to see your projects.
         </p>
@@ -75,15 +76,19 @@ export default async function MyProjectsList({
 
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <FolderKanban className="size-8 text-muted-foreground/60" />
-        <p className="mt-4 text-sm font-medium text-foreground">
-          You are not a member of any project yet
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Projects you join will show up here.
-        </p>
-      </div>
+      <EmptyState
+        icon={FolderKanban}
+        title="No projects yet"
+        description="Projects you are added to will show up here. Ask a workspace admin to add you."
+        action={
+          <Link
+            href="/workspaces"
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Browse workspaces
+          </Link>
+        }
+      />
     )
   }
 
@@ -130,7 +135,11 @@ export default async function MyProjectsList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        role="group"
+        aria-label="Filter and sort projects"
+        className="flex flex-wrap items-center gap-2"
+      >
         <UrlSelect
           param="health"
           value={health}
@@ -155,18 +164,22 @@ export default async function MyProjectsList({
       </div>
 
       {projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <FolderKanban className="size-8 text-muted-foreground/60" />
-          <p className="mt-4 text-sm font-medium text-foreground">
-            No projects match these filters
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Try clearing a filter or two.
-          </p>
-        </div>
+        <EmptyState
+          icon={FolderKanban}
+          title="No projects match these filters"
+          description="Try clearing a filter or two."
+          action={
+            <Link
+              href="/my-projects"
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Clear filters
+            </Link>
+          }
+        />
       ) : (
         <>
-          <div className="flex max-h-[60vh] flex-col gap-8 overflow-y-auto scrollbar-thin">
+          <div className="flex flex-col gap-8">
             {orderedWorkspaceIds.map((workspaceId) => (
               <section key={workspaceId} className="flex flex-col gap-4">
                 <h2 className="text-lg font-semibold text-foreground">

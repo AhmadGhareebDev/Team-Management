@@ -157,12 +157,15 @@ export default function ActivityFeed({
       </div>
 
       {items.length === 0 ? (
-        <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-          Changes made across your workspaces will show up here.
-        </p>
+        <div className="px-4 py-8 text-center">
+          <p className="text-sm font-medium text-foreground">No activity yet</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Changes made across your workspaces will show up here.
+          </p>
+        </div>
       ) : (
         <>
-          <ul className="max-h-96 divide-y divide-border/40 overflow-y-auto scrollbar-thin">
+          <ul className="divide-y divide-border/40 md:max-h-96 md:overflow-y-auto md:scrollbar-thin">
             {items.map((item) => (
               <ActivityRow key={item.id} item={item} />
             ))}

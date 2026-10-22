@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import type { Metadata } from "next"
 import { CreateWorkSpace } from "./_components/CreateWorkSpace"
 import WorkspacesList from "./_components/WorkspacesList"
+import { PageHeader } from "@/components/web/PageHeader"
 import { WorkSpacesGridSkeleton } from "@/components/skeletons"
 import { searchParamsKey } from "@/lib/pagination"
 
@@ -20,14 +21,12 @@ export default async function WorkSpacesPage({
   const listKey = searchParamsKey(resolvedSearchParams)
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-sm:p-0">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between border-b border-border/40 pb-4">
-        <h1 className="font-serif text-2xl font-bold tracking-tight text-foreground">
-          WorkSpaces
-        </h1>
-        <CreateWorkSpace />
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Workspaces"
+        description="Your teams and the projects they share."
+        actions={<CreateWorkSpace />}
+      />
 
       {/* The grid is the only part that waits on the database, so the heading
           and the create button paint immediately. */}

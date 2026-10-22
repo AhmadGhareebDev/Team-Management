@@ -15,7 +15,7 @@ export default function DashboardLayout({
         <AppSidebar />
         <SidebarInset>
           <Navbar withSidebarTrigger />
-          <main className="flex-1 p-4 sm:p-6">
+          <main id="main" tabIndex={-1} className="flex-1 p-4 outline-none sm:p-6">
             <TooltipProvider>
               {children}
             </TooltipProvider>

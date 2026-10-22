@@ -1,4 +1,4 @@
-import { Search } from "lucide-react"
+import { Search, Users } from "lucide-react"
 import {
   getWorkspaceMembersPage,
   getWorkspaceMemberAssignments,
@@ -10,6 +10,7 @@ import UrlSelect from "@/components/web/UrlSelect"
 import type { UrlSelectOption } from "@/components/web/UrlSelect"
 import { PAGE_SIZES, toParams } from "@/lib/pagination"
 import type { WorkspaceRole } from "@/components/web/AuthGateProvider"
+import { EmptyState } from "@/components/web/EmptyState"
 
 const ROLE_OPTIONS: UrlSelectOption[] = [
   { value: "all", label: "All roles" },
@@ -66,7 +67,7 @@ export default async function WorkspaceMembersList({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <form className="relative" action={`/workspaces/${workspaceId}`} method="get">
+        <form className="relative w-full sm:w-44" action={`/workspaces/${workspaceId}`} method="get">
           <input type="hidden" name="role" value={memberRole ?? ""} />
           <input type="hidden" name="sort" value={sort} />
           <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -75,7 +76,7 @@ export default async function WorkspaceMembersList({
             defaultValue={search ?? ""}
             placeholder="Search members"
             aria-label="Search members"
-            className="h-9 w-full rounded-none border border-border/60 bg-background pl-7 pr-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-9 w-full rounded-none border border-border/60 bg-background pr-2 pl-7 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </form>
         <UrlSelect
@@ -95,12 +96,14 @@ export default async function WorkspaceMembersList({
       </div>
 
       {members.length === 0 ? (
-        <Card className="border-0 bg-card py-10 text-center text-sm text-muted-foreground shadow-sm ring-1 ring-foreground/5">
-          No members match these filters.
-        </Card>
+        <EmptyState
+          icon={Users}
+          title="No members match"
+          description="Try a different role or search term."
+        />
       ) : (
         <>
-          <Card className="max-h-[32rem] overflow-y-auto border-0 bg-card shadow-sm ring-1 ring-foreground/5">
+          <Card className="bg-card shadow-sm ring-1 ring-foreground/5 md:max-h-[32rem] md:overflow-y-auto">
             <div className="divide-y divide-border">
               {members.map((member) => (
                 <MemberRow

@@ -141,21 +141,21 @@ export default function ProjectCard({
       size="sm"
       onClick={handleCardClick}
       className={cn(
-        "group/card cursor-pointer border-0 bg-card transition-colors duration-200",
-        "hover:bg-muted/50"
+        "group/card cursor-pointer bg-card transition-colors duration-200",
+        "hover:bg-muted/50 focus-within:ring-2 focus-within:ring-primary"
       )}
     >
-      <CardContent className="flex flex-col gap-4 p-5">
+      <CardContent className="flex flex-col gap-4">
         {/* Top Bar: Icon + Title + Actions */}
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-muted text-foreground transition-colors duration-200 group-hover/card:bg-primary group-hover/card:text-primary-foreground">
-            <Folder className="h-4 w-4" />
+          <div className="flex size-10 shrink-0 items-center justify-center bg-muted text-foreground transition-colors duration-200 group-hover/card:bg-primary group-hover/card:text-primary-foreground">
+            <Folder className="size-4" />
           </div>
 
           <h3 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight text-foreground">
             <Link
               href={`/workspaces/${workspaceId}/project/${project.id}`}
-              className="hover:underline focus:outline-none"
+              className="underline-offset-4 hover:underline focus-visible:underline"
             >
               {project.name}
             </Link>
@@ -177,11 +177,11 @@ export default function ProjectCard({
                     />
                   }
                 >
-                  <EllipsisVertical className="h-4 w-4" />
+                  <EllipsisVertical className="size-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
                   <DropdownMenuItem onClick={openEdit}>
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="size-4" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -194,7 +194,7 @@ export default function ProjectCard({
                       })
                     }
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="size-4" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -209,7 +209,7 @@ export default function ProjectCard({
             {project.description}
           </p>
         ) : (
-          <p className="text-sm italic text-muted-foreground/60">
+          <p className="text-sm italic text-muted-foreground">
             No description provided.
           </p>
         )}
@@ -227,7 +227,7 @@ export default function ProjectCard({
         {/* Footer: Member stats + Avatars */}
         <div className="flex items-center justify-between border-t border-border/40 pt-3">
           <span className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
-            <Users className="h-3.5 w-3.5" />
+            <Users className="size-3.5" />
             {project.members.length} {memberLabel}
           </span>
 
@@ -266,7 +266,7 @@ export default function ProjectCard({
                   })
                 }
               >
-                <UserPlus className="h-3.5 w-3.5" />
+                <UserPlus className="size-3.5" />
               </Button>
             )}
           </div>
@@ -304,7 +304,7 @@ export default function ProjectCard({
             )}
           </Field>
           {editForm.formState.errors.root && (
-            <p className="text-sm text-center text-red-400">
+            <p className="text-sm text-center text-destructive">
               {editForm.formState.errors.root.message}
             </p>
           )}
@@ -321,7 +321,7 @@ export default function ProjectCard({
           onSubmit={deleteForm.handleSubmit(handleDeleteSubmit)}
         >
           {deleteForm.formState.errors.root && (
-            <p className="text-sm text-center text-red-400">
+            <p className="text-sm text-center text-destructive">
               {deleteForm.formState.errors.root.message}
             </p>
           )}

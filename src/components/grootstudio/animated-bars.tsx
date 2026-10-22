@@ -50,6 +50,11 @@ const GradientBars: React.FC<AnimatedBarsProps> = ({
             filter: brightness(0.9);
           }
         }
+        @media (prefers-reduced-motion: reduce) {
+          [data-fluid-bar] {
+            animation: none !important;
+          }
+        }
       `}</style>
 
             <div className={cn("absolute inset-0 z-0 overflow-hidden pointer-events-none", className)}>
@@ -66,6 +71,7 @@ const GradientBars: React.FC<AnimatedBarsProps> = ({
                         return (
                             <div
                                 key={index}
+                                data-fluid-bar
                                 className="relative"
                                 style={
                                     {

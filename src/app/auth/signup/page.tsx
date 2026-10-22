@@ -1,5 +1,5 @@
 "use client"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { insertSignUpUserSchema , InsertSignUpUserSchemaType } from "@/db/validations"
 import { Controller , useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -83,17 +83,17 @@ export default function SignUp() {
 
 
    return (
-        <Card className="w-full max-w-lg">
+        <Card className="w-full">
          <CardHeader>
-            <CardTitle>Sign Up</CardTitle>
+            <CardTitle><h1 className="text-inherit">Sign Up</h1></CardTitle>
             <CardDescription>
-               Welcome! Please enter your details to create an account.
+               Create an account to start working with your team.
             </CardDescription>
          </CardHeader>
         
          <CardContent>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-               <FieldGroup className="gap-3">
+               <FieldGroup className="gap-5">
                   <Controller name="name" control={form.control} render={({field , fieldState}) => (
                      <Field>
                            <FieldLabel>Name</FieldLabel>
@@ -141,7 +141,10 @@ export default function SignUp() {
                                   <Spinner className="absolute right-2 top-1/2 -translate-y-1/2" />
                                )}
                                {usernameStatus === "available" && (
-                                  <Check className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500" />
+                                  <>
+                                     <Check className="absolute top-1/2 right-2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                                     <span className="sr-only">Username is available</span>
+                                  </>
                                )}
                             </div>
                             {fieldState.invalid && (
@@ -162,36 +165,27 @@ export default function SignUp() {
                    <Controller name="password" control={form.control} render={({field , fieldState}) => (
                       <Field>
                            <FieldLabel>Password</FieldLabel>
-                            <Input className="px-2"  placeholder="••••••••" {...field} />
-                            <div className="flex w-full items-start justify-between mt-1.5 gap-2">
-                              <div>
-                                 {fieldState.invalid && (
-                                    <FieldError errors={[fieldState.error]} />
-                                 )}
-                              </div>
-                              
-                              </div>
+                            <Input placeholder="••••••••" {...field} />
+                            {fieldState.invalid && (
+                               <FieldError errors={[fieldState.error]} />
+                            )}
                       </Field>     
                    )} />
                 </FieldGroup>
-                <Button type="submit" className="w-full mt-4" disabled={isLoginPending || disableButton}>
+                {form.formState.errors.root && (
+                   <p className="mt-4 text-center text-sm text-destructive">
+                      {form.formState.errors.root.message}
+                   </p>
+                )}
+                <Button type="submit" className="mt-5 w-full" disabled={isLoginPending || disableButton}>
                    {isLoginPending ? <Spinner data-icon="inline-start" /> : <></>}
-                   {isLoginPending ? "Signing up..." : "Sign Up"}
-
+                   {isLoginPending ? "Creating account..." : "Create account"}
                 </Button>
              </form>
-             <p className="mt-4 text-center text-sm text-muted-foreground">
-                already have an account?{" "}
-                <Link href="/auth/login" className="font-medium text-primary hover:underline">Log in</Link>
+             <p className="mt-5 text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link href="/auth/login" className="font-medium text-primary underline-offset-4 hover:underline">Log in</Link>
              </p>
-             
-            <CardFooter className="flex flex-col items-center mt-5">
-                {form.formState.errors.root && (
-                <p className="text-red-400 text-center text-sm">
-                    {form.formState.errors.root.message}
-                </p>
-                    )}
-            </CardFooter>
          </CardContent>
 
         </Card>

@@ -33,7 +33,7 @@ export function WorkSpaceCardSkeleton() {
 export function WorkSpacesGridSkeleton() {
   return (
     <div
-      className="grid max-h-[60vh] grid-cols-1 gap-6 overflow-y-auto scrollbar-thin sm:grid-cols-2 lg:grid-cols-3"
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
       aria-hidden
     >
       {Array.from({ length: 3 }).map((_, i) => (

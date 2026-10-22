@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth"
 import { getRecentActivityForUser } from "@/db/queries/activity"
 import { TasksGridSkeleton, ActivityFeedSkeleton } from "@/components/skeletons"
 import { PAGE_SIZES, searchParamsKey } from "@/lib/pagination"
+import { PageHeader } from "@/components/web/PageHeader"
 
 export const metadata: Metadata = {
   title: "My Tasks",
@@ -23,12 +24,11 @@ export default async function MyTasksPage({
   const listKey = searchParamsKey(resolvedSearchParams)
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-sm:p-0">
-      <div className="flex items-center justify-between border-b border-border/40 pb-4">
-        <h1 className="font-serif text-2xl font-bold tracking-tight text-foreground">
-          My Tasks
-        </h1>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="My Tasks"
+        description="Everything assigned to you, across every workspace."
+      />
 
       <Suspense key={listKey} fallback={<TasksGridSkeleton />}>
         <MyTasksList searchParams={resolvedSearchParams} />

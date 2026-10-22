@@ -18,6 +18,7 @@ import { requireWorkspaceManager } from "@/lib/guards"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
+import { PageHeader } from "@/components/web/PageHeader"
 
 export const instant = false
 
@@ -61,23 +62,20 @@ export default async function WorkspaceSettingsPage({
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div>
-        <Link
-          href={`/workspaces/${workspaceId}`}
-          className={buttonVariants({ variant: "secondary", size: "sm" })}
-        >
-          <ArrowLeft className="size-4" />
-          Back to Workspace
-        </Link>
-      </div>
-
-      <div className="space-y-1">
-        <h1 className="font-serif text-2xl">Workspace Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your workspace name and members.
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-6">
+      <PageHeader
+        title="Workspace Settings"
+        description="Manage this workspace's name and members."
+        back={
+          <Link
+            href={`/workspaces/${workspaceId}`}
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            aria-label="Back to workspace"
+          >
+            <ArrowLeft className="size-4" />
+          </Link>
+        }
+      />
 
       <div className="grid items-start gap-6 md:grid-cols-[1fr_360px]">
         <div className="space-y-6">
@@ -97,21 +95,21 @@ export default async function WorkspaceSettingsPage({
             </CardContent>
           </Card>
           <Card className="border-destructive/50">
-                      <CardHeader>
-                        <CardTitle className="text-destructive">Danger zone</CardTitle>
-                        <CardDescription>
-                          Delete This workspace and all associated data.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground">
-                          This action is permanent and cannot be undone.
-                        </p>
-                      </CardContent>
-                      <CardFooter className="flex justify-end">
-                        <DeleteWorkspace workspaceId={workspaceId} role={role} />
-                      </CardFooter>
-            </Card>
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger zone</CardTitle>
+              <CardDescription>
+                Delete this workspace and all associated data.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                This action is permanent and cannot be undone.
+              </p>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <DeleteWorkspace workspaceId={workspaceId} role={role} />
+            </CardFooter>
+          </Card>
         </div>
 
         <div className="space-y-6 self-start md:sticky md:top-20">

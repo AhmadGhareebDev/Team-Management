@@ -27,16 +27,16 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="flex h-full items-center justify-center p-6">
+    <div className="flex min-h-[50vh] items-center justify-center p-6">
       <div className="flex max-w-md flex-col items-center gap-4 text-center">
         <div className="flex size-12 items-center justify-center rounded-none bg-destructive/10">
           <TriangleAlert className="size-6 text-destructive" />
         </div>
 
         <div className="space-y-1.5">
-          <h2 className="font-serif text-xl font-semibold text-foreground">
+          <h1 className="font-serif text-xl font-semibold text-foreground">
             Something went wrong
-          </h2>
+          </h1>
           <p className="text-sm text-muted-foreground">
             We couldn&apos;t load this page. It may have been a temporary
             problem — try again, or head back to your workspaces.
@@ -44,7 +44,7 @@ export default function Error({
         </div>
 
         {error.digest && (
-          <p className="font-mono text-[11px] text-muted-foreground/60">
+          <p className="font-mono text-xs text-muted-foreground">
             Reference: {error.digest}
           </p>
         )}

@@ -18,7 +18,7 @@
   --muted-foreground: oklch(0.520 0.020 240.0);
   --accent: oklch(0.910 0.020 220.0);
   --accent-foreground: oklch(0.280 0.025 240.0);
-  --destructive: oklch(0.620 0.150 25.0);
+  --destructive: oklch(0.560 0.150 25.0);
   --destructive-foreground: oklch(0.990 0.003 240.0);
   --border: oklch(0.890 0.010 240.0);
   --input: oklch(0.890 0.010 240.0);
@@ -80,7 +80,7 @@
   --muted-foreground: oklch(0.600 0.018 240.0);
   --accent: oklch(0.240 0.025 240.0);
   --accent-foreground: oklch(0.880 0.010 240.0);
-  --destructive: oklch(0.550 0.140 22.0);
+  --destructive: oklch(0.680 0.140 22.0);
   --destructive-foreground: oklch(0.980 0.005 240.0);
   --border: oklch(0.220 0.018 250.0);
   --input: oklch(0.220 0.018 250.0);
@@ -184,8 +184,32 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+@media (pointer: coarse) {
+  [data-slot="button"][class~="size-7"] {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  [data-slot="dropdown-menu-item"],
+  [data-slot="select-item"] {
+    min-height: 2.75rem;
+  }
+
+  [data-slot="select-trigger"] {
+    min-height: 2.5rem;
   }
 }
 

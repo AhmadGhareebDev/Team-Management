@@ -14,6 +14,7 @@ import { PAGE_SIZES, toParams } from "@/lib/pagination"
 import type { TaskStatus } from "@/db/validations"
 import { statusLabels } from "@/lib/task-display"
 import UserTaskCard from "./UserTaskCard"
+import { EmptyState } from "@/components/web/EmptyState"
 
 const STATUS_OPTIONS: UrlSelectOption[] = [
   { value: "all", label: "All statuses" },
@@ -51,7 +52,7 @@ export default async function MyTasksList({
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) {
     return (
-      <div className="col-span-full h-screen flex flex-col items-center justify-center gap-4 py-16">
+      <div className="col-span-full flex flex-col items-center justify-center gap-4 py-16">
         <p className="text-sm text-muted-foreground">
           You need to be logged in to see your tasks.
         </p>
@@ -123,7 +124,11 @@ export default async function MyTasksList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        role="group"
+        aria-label="Filter and sort tasks"
+        className="flex flex-wrap items-center gap-2"
+      >
         <UrlSelect
           param="status"
           value={status}
@@ -169,18 +174,22 @@ export default async function MyTasksList({
       </div>
 
       {tasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <ListTodo className="size-8 text-muted-foreground/60" />
-          <p className="mt-4 text-sm font-medium text-foreground">
-            No tasks match these filters
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Try clearing a filter or two.
-          </p>
-        </div>
+        <EmptyState
+          icon={ListTodo}
+          title="No tasks match these filters"
+          description="Try clearing a filter or two, or check another workspace."
+          action={
+            <Link
+              href="/my-tasks"
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Clear filters
+            </Link>
+          }
+        />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 md:max-h-[60vh] md:overflow-y-auto scrollbar-thin sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {tasks.map((task) => (
               <UserTaskCard key={task.id} task={task} />
             ))}

@@ -96,7 +96,7 @@ export function CreateWorkSpace() {
         )}
       </Field>
       {form.formState.errors.root && (
-        <p className="text-sm text-center text-red-400">
+        <p className="text-sm text-center text-destructive">
           {form.formState.errors.root.message}
         </p>
       )}

@@ -28,15 +28,16 @@ export function Navbar({
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 w-full items-center gap-2 border-b bg-background px-4">
+    <header className="sticky top-0 z-40 flex h-14 w-full items-center gap-2 border-b border-border/40 bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80">
       {withSidebarTrigger && <SidebarTrigger />}
       <Link
         href="/"
-        className="text-sm font-semibold tracking-widest text-foreground uppercase"
+        className="shrink-0 text-sm font-semibold tracking-widest text-foreground uppercase whitespace-nowrap"
       >
-        Team Management
+        <span aria-hidden="true" className="sm:hidden">TM</span>
+        <span className="max-sm:sr-only">Team Management</span>
       </Link>
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
         {isPending ? (
           <Spinner className="size-4" />
         ) : session ? (

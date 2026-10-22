@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +19,10 @@ import { authClient } from "@/lib/auth-client"
 
 export function AppSidebar() {
   const { data: session } = authClient.useSession()
+  const pathname = usePathname()
   const user = session?.user
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`)
   const initials = user?.name
     ? user.name
         .trim()
@@ -32,7 +36,10 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-3 px-2 py-2">
+        <Link
+          href="/settings"
+          className="flex items-center gap-3 px-2 py-2 transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
+        >
           <ImageKitAvatar
             src={user?.avatar_url ?? null}
             alt={user?.name ?? ""}
@@ -40,15 +47,15 @@ export function AppSidebar() {
             size={32}
             className="size-8"
           />
-          <div className="flex flex-col leading-tight">
-            <span className="text-sm font-medium text-foreground">
+          <div className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-sm font-medium text-foreground">
               {user?.name ?? "Account"}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="truncate text-xs text-muted-foreground">
               {user?.username ? `@${user.username}` : ""}
             </span>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
       <SidebarSeparator />
       <SidebarContent>
@@ -56,13 +63,21 @@ export function AppSidebar() {
           <SidebarGroupLabel>You</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="My Tasks" render={<Link href="/my-tasks" />}>
+              <SidebarMenuButton
+                tooltip="My Tasks"
+                isActive={isActive("/my-tasks")}
+                render={<Link href="/my-tasks" />}
+              >
                 <ListTodo className="size-4" />
                 <span>My Tasks</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="My Projects" render={<Link href="/my-projects" />}>
+              <SidebarMenuButton
+                tooltip="My Projects"
+                isActive={isActive("/my-projects")}
+                render={<Link href="/my-projects" />}
+              >
                 <FolderKanban className="size-4" />
                 <span>My Projects</span>
               </SidebarMenuButton>
@@ -71,16 +86,24 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="WorkSpaces" render={<Link href="/workspaces" />}>
+              <SidebarMenuButton
+                tooltip="Workspaces"
+                isActive={isActive("/workspaces")}
+                render={<Link href="/workspaces" />}
+              >
                 <LucideFolderMinus className="size-4" />
-                <span>WorkSpaces</span>
+                <span>Workspaces</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Settings" render={<Link href="/settings" />}>
+              <SidebarMenuButton
+                tooltip="Settings"
+                isActive={isActive("/settings")}
+                render={<Link href="/settings" />}
+              >
                 <Settings className="size-4" />
                 <span>Settings</span>
               </SidebarMenuButton>

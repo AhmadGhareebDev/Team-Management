@@ -60,9 +60,9 @@ export default function VerifyEmailForm({ email }: VerifyEmailFormProps) {
   }
 
   return (
-    <Card className="w-sm">
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>Verify your email</CardTitle>
+        <CardTitle><h1 className="text-inherit">Verify your email</h1></CardTitle>
         <CardDescription>
           We sent a 6-digit code to <span className="text-foreground font-medium">{email}</span>. Enter it below.
         </CardDescription>

@@ -34,14 +34,14 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
   return (
     <Link
       href={`/workspaces/${project.workspace.id}/project/${project.id}?task=${task.id}`}
-      className="group/card block h-full focus-visible:outline-none"
+      className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <Card
         size="sm"
         className={cn(
-          "group/card relative h-full overflow-hidden border-0 bg-card transition-colors duration-200",
-          "hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary",
-          isBlocked && "border-destructive/30"
+          "group/card relative h-full overflow-hidden bg-card transition-colors duration-200",
+          "hover:bg-muted/50",
+          isBlocked && "ring-destructive/30"
         )}
       >
         <span
@@ -51,8 +51,8 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
           )}
         />
 
-        <CardContent className="flex h-full flex-col gap-3 p-5 pl-6">
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <CardContent className="flex h-full flex-col gap-3 pl-6">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="truncate">{project.workspace.name}</span>
             <span className="shrink-0 text-muted-foreground/50">/</span>
             <span className="truncate font-medium text-foreground/80">
@@ -83,13 +83,13 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
               {task.description}
             </p>
           ) : (
-            <p className="text-sm italic text-muted-foreground/60">
+            <p className="text-sm italic text-muted-foreground">
               No description provided.
             </p>
           )}
 
           {isBlocked && (
-            <div className="flex items-center gap-1.5 rounded-none border border-destructive/20 bg-destructive/10 px-2 py-1 text-[10px] font-medium text-destructive">
+            <div className="flex items-center gap-1.5 border border-destructive/20 bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">
               <AlertCircle className="size-3 shrink-0" />
               <span className="truncate">
                 Blocked by {pendingBlockers.map((d) => d.dependsOn.title).join(", ")}
@@ -100,7 +100,7 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
           {task.dueDate && (
             <div
               className={cn(
-                "flex items-center gap-1.5 text-[11px] font-medium",
+                "flex items-center gap-1.5 text-xs font-medium",
                 overdue
                   ? "text-destructive"
                   : dueSoon
@@ -113,8 +113,8 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
             </div>
           )}
 
-          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3">
-            {task.assignees.length > 0 && (
+          {task.assignees.length > 0 && (
+            <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3">
               <div className="flex items-center gap-1">
                 <AvatarGroup>
                   {shownAssignees.map((a) => (
@@ -132,8 +132,8 @@ export default function UserTaskCard({ task }: { task: UserAssignedTask }) {
                   )}
                 </AvatarGroup>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>

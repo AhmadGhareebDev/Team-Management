@@ -158,13 +158,17 @@ export function NotificationsDropdown() {
               variant="outline"
               size="icon-sm"
               className="relative border-0"
-              aria-label="Notifications"
+              aria-label={
+                notifications.unreadCount > 0
+                  ? `Notifications, ${notifications.unreadCount} unread`
+                  : "Notifications"
+              }
             >
               <Bell />
               {notifications.unreadCount > 0 && (
                 <span className="absolute top-1 right-1 flex size-2 items-center justify-center">
                   <span className="absolute size-2 rounded-none bg-primary" />
-                  <span className="absolute size-2 animate-ping rounded-none bg-primary/60" />
+                  <span className="absolute size-2 animate-ping rounded-none bg-primary/60 motion-reduce:animate-none" />
                 </span>
               )}
             </Button>
@@ -188,13 +192,17 @@ export function NotificationsDropdown() {
             variant="outline"
             size="icon-sm"
             className="relative border-0"
-            aria-label="Notifications"
+            aria-label={
+              notifications.unreadCount > 0
+                ? `Notifications, ${notifications.unreadCount} unread`
+                : "Notifications"
+            }
           >
             <Bell />
             {notifications.unreadCount > 0 && (
               <span className="absolute top-1 right-1 flex size-2 items-center justify-center">
                 <span className="absolute size-2 rounded-none bg-primary" />
-                <span className="absolute size-2 animate-ping rounded-none bg-primary/60" />
+                <span className="absolute size-2 animate-ping rounded-none bg-primary/60 motion-reduce:animate-none" />
               </span>
             )}
           </Button>
