@@ -24,7 +24,7 @@ export const taskPriorityEnum = pgEnum("task_priority", [
 export const task = pgTable("task", {
   id: text("id").primaryKey(),
   projectId: text("project_id").notNull().references(() => project.id, { onDelete: "cascade" }),
-  createdBy: text("created_by").notNull().references(() => user.id),
+  createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   description: text("description"),
   status: taskStatusEnum("status").notNull().default("todo"),

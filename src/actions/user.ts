@@ -9,7 +9,8 @@ import { headers } from "next/headers"
 export async function checkEmail(email: string) {
     try {
     const existing = await db.query.user.findFirst({
-        where: eq(user.email, email)
+        where: eq(user.email, email),
+        columns: { id: true },
     })
 
     return { success: true ,available: !existing };
@@ -23,7 +24,8 @@ export async function checkEmail(email: string) {
 export async function checkUsername(username: string) {
     try {
     const existing = await db.query.user.findFirst({
-        where: eq(user.username, username)
+        where: eq(user.username, username),
+        columns: { id: true },
     })
 
     return { success: true ,available: !existing };

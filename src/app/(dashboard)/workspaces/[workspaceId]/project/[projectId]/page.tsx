@@ -17,10 +17,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { workspaceId, projectId } = await params
   const session = await auth.api.getSession({ headers: await headers() })
-  const project = await getProjectById(projectId)
+  const [project, access] = await Promise.all([
+    getProjectById(projectId),
+    session ? getUserProjectAccess(projectId, session.user.id) : null,
+  ])
 
   if (session && project && project.workspaceId === workspaceId) {
-    const access = await getUserProjectAccess(projectId, session.user.id)
     const canView =
       access?.role === "owner" ||
       access?.role === "admin" ||
@@ -40,7 +42,10 @@ export default async function ProjectCanvasPage({
 }: { params: Promise<{ workspaceId: string; projectId: string }>, searchParams: Promise<{ task?: string }> }) {
     const { workspaceId, projectId } = await params
     const session = await auth.api.getSession({ headers: await headers() })
-    const project = await getProjectById(projectId)
+    const [project, access] = await Promise.all([
+        getProjectById(projectId),
+        session ? getUserProjectAccess(projectId, session.user.id) : null,
+    ])
 
     if (!project) {
         return (
@@ -55,10 +60,6 @@ export default async function ProjectCanvasPage({
             </div>
         )
     }
-
-    const access = session
-        ? await getUserProjectAccess(projectId, session.user.id)
-        : null
 
     const canView =
         access?.role === "owner" ||

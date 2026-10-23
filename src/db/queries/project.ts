@@ -3,6 +3,7 @@ import { project, task } from "@/db/schemas";
 import { workspaceMembers } from "@/db/schemas/workspaceMembers";
 import { projectMembers } from "@/db/schemas/projectMembers";
 import { and, asc, desc, eq, exists, inArray, lt, ne, notExists, or, sql } from "drizzle-orm";
+import { cache } from "react";
 import { PAGE_SIZES, type Paginated } from "@/lib/pagination";
 
 export type ProjectSort = "newest" | "nearest_deadline" | "name";
@@ -48,7 +49,7 @@ export function projectOrderBy(sort?: ProjectSort) {
     return [desc(project.createdAt)];
 }
 
-export async function getProjectById(projectId: string) {
+export const getProjectById = cache(async (projectId: string) => {
     return await db.query.project.findFirst({
         where: eq(project.id, projectId),
         columns: {
@@ -73,41 +74,46 @@ export async function getProjectById(projectId: string) {
             },
         },
     });
-}
+});
 export type ProjectWithMembers = Awaited<ReturnType<typeof getProjectById>> & {
     workspaceId: string;
 };
 
-export async function getUserProjectAccess(projectId: string, userId: string) {
-    const projectRow = await db.query.project.findFirst({
-        where: eq(project.id, projectId),
-        columns: { id: true, workspaceId: true },
-    });
+export const getUserProjectAccess = cache(async (projectId: string, userId: string) => {
+    const rows = await db
+        .select({
+            workspaceId: project.workspaceId,
+            role: workspaceMembers.role,
+            isProjectMember: sql<boolean>`${projectMembers.id} is not null`,
+        })
+        .from(project)
+        .leftJoin(
+            workspaceMembers,
+            and(
+                eq(workspaceMembers.workspaceId, project.workspaceId),
+                eq(workspaceMembers.userId, userId)
+            )
+        )
+        .leftJoin(
+            projectMembers,
+            and(
+                eq(projectMembers.projectId, project.id),
+                eq(projectMembers.userId, userId)
+            )
+        )
+        .where(eq(project.id, projectId))
+        .limit(1);
 
-    if (!projectRow) return null;
+    const row = rows[0];
 
-    const workspaceMembership = await db.query.workspaceMembers.findFirst({
-        where: and(
-            eq(workspaceMembers.workspaceId, projectRow.workspaceId),
-            eq(workspaceMembers.userId, userId)
-        ),
-        columns: { role: true },
-    });
-
-    const projectMembership = await db.query.projectMembers.findFirst({
-        where: and(
-            eq(projectMembers.projectId, projectId),
-            eq(projectMembers.userId, userId)
-        ),
-        columns: { id: true },
-    });
+    if (!row) return null;
 
     return {
-        workspaceId: projectRow.workspaceId,
-        role: workspaceMembership?.role ?? null,
-        isProjectMember: Boolean(projectMembership),
+        workspaceId: row.workspaceId,
+        role: row.role ?? null,
+        isProjectMember: Boolean(row.isProjectMember),
     };
-}
+});
 export type UserProjectAccess = Awaited<ReturnType<typeof getUserProjectAccess>>;
 
 /**

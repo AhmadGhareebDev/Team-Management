@@ -103,26 +103,6 @@ export async function publishExistingNotifications(ids: string[]) {
   }
 }
 
-export async function hasNotified({
-  userId,
-  taskId,
-  type,
-}: {
-  userId: string
-  taskId: string
-  type: NotificationTypeName
-}) {
-  const existing = await db.query.notification.findFirst({
-    where: and(
-      eq(notification.userId, userId),
-      eq(notification.taskId, taskId),
-      eq(notification.type, type)
-    ),
-    columns: { id: true },
-  })
-  return Boolean(existing)
-}
-
 const DUE_SOON_WINDOW_MS = 48 * 60 * 60 * 1000
 
 export async function clearTaskDateNotifications(taskId: string) {
@@ -259,11 +239,10 @@ export async function runNotificationsScan() {
     body: string
   }) => {
     for (const assigneeId of assigneeIdsByTask.get(taskId) ?? []) {
-      // The dedupe check has to run inside the deferred callback, not before
-      // it: notifyManagers below can target the same (user, task, type), and
-      // a check made now would not see an insert that has not landed yet.
+      // Dedupe is the unique index's job: createNotification uses
+      // onConflictDoNothing, so a repeated (user, task, type) is a no-op. Doing
+      // a SELECT first would only add a round trip.
       after(async () => {
-        if (await hasNotified({ userId: assigneeId, taskId, type })) return
         await createNotification({
           userId: assigneeId,
           workspaceId: workspaceByProjectId.get(projectId) ?? null,
@@ -292,7 +271,6 @@ export async function runNotificationsScan() {
     if (!workspaceId) return
     for (const managerId of managerIdsByWorkspace.get(workspaceId) ?? []) {
       after(async () => {
-        if (await hasNotified({ userId: managerId, taskId, type })) return
         await createNotification({
           userId: managerId,
           workspaceId,

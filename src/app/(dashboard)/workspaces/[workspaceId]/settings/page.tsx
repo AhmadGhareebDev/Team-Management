@@ -31,10 +31,12 @@ export async function generateMetadata({
   const session = await auth.api.getSession({ headers: await headers() })
 
   if (session) {
-    const role = await getUserWorkspaceRole(workspaceId, session.user.id)
+    const [role, workspace] = await Promise.all([
+      getUserWorkspaceRole(workspaceId, session.user.id),
+      getWorkspaceById(workspaceId),
+    ])
 
     if (role === "owner" || role === "admin") {
-      const workspace = await getWorkspaceById(workspaceId)
       return {
         title: workspace ? `${workspace.name} · Settings` : "Workspace Settings",
       }
@@ -54,9 +56,10 @@ export default async function WorkspaceSettingsPage({
   const { workspaceId } = await params
   const resolvedSearchParams = await searchParams
 
-  const { role } = await requireWorkspaceManager(workspaceId)
-
-  const workspace = await getWorkspaceById(workspaceId)
+  const [{ role }, workspace] = await Promise.all([
+    requireWorkspaceManager(workspaceId),
+    getWorkspaceById(workspaceId),
+  ])
   if (!workspace) {
     notFound()
   }

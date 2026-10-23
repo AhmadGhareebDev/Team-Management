@@ -28,9 +28,14 @@ export async function generateMetadata({
   const { workspaceId } = await params
   const session = await auth.api.getSession({ headers: await headers() })
 
-  if (session && (await getUserWorkspaceRole(workspaceId, session.user.id))) {
-    const workspace = await getWorkspaceById(workspaceId)
-    return { title: workspace?.name ?? "Workspace" }
+  if (session) {
+    const [role, workspace] = await Promise.all([
+      getUserWorkspaceRole(workspaceId, session.user.id),
+      getWorkspaceById(workspaceId),
+    ])
+    if (role) {
+      return { title: workspace?.name ?? "Workspace" }
+    }
   }
 
   return { title: "Workspace" }
@@ -44,8 +49,10 @@ export default async function WorkspaceDetailsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { workspaceId } = await params
-  const { role } = await requireWorkspaceMembership(workspaceId);
-  const workspace = await getWorkspaceById(workspaceId);
+  const [{ role }, workspace] = await Promise.all([
+    requireWorkspaceMembership(workspaceId),
+    getWorkspaceById(workspaceId),
+  ]);
   const resolvedSearchParams = await searchParams;
   // Both columns paginate over the same query, so one key covers them: changing
   // the page remounts the boundaries and reveals their skeletons immediately.

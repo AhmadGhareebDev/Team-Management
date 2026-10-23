@@ -120,6 +120,20 @@ function TaskNodeComponent({ data, selected }: NodeProps) {
 
   const dueDateLabel = task.dueDate ? formatDueDate(task.dueDate) : null
 
+  const blockerNames = pendingBlockers.map((d) => d.dependsOn.title)
+  const blockedLabel =
+    pendingBlockers.length === 1
+      ? `Blocked by ${blockerNames[0]}`
+      : `Blocked by ${pendingBlockers.length} tasks`
+  const blockerTitle = [
+    `Blocked by: ${blockerNames.join(", ")}`,
+    overdueBlockers.length > 0
+      ? `${overdueBlockers.length} blocker${overdueBlockers.length === 1 ? "" : "s"} past due`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n")
+
   const nextStatus = allowedTaskTransitions(task.status)[0] ?? null
   const canAdvance = Boolean(nextStatus) && canToggleStatus && !isBlocked
 
@@ -138,21 +152,20 @@ function TaskNodeComponent({ data, selected }: NodeProps) {
 
       <div
         className={cn(
-          "relative w-72 rounded-none border-0 outline-none bg-card p-4 overflow-hidden",
-          isBlocked && "bg-destructive/[0.02]",
-          selected && "ring-2 ring-primary/80"
+          "relative w-72 overflow-hidden bg-card shadow-sm ring-1 ring-foreground/5 transition-shadow duration-200 hover:shadow-md",
+          isBlocked && "ring-destructive/25",
+          selected && "shadow-md ring-2 ring-primary"
         )}
       >
-        {/* Left Status Indicator Strip - Flattened as background block with border-0 */}
-        <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 border-0 outline-none", statusLeftAccent[task.status])} />
+        <div className={cn("absolute inset-y-0 left-0 w-1", statusLeftAccent[task.status])} />
 
-        <div className="flex flex-col gap-3 pl-1.5">
-          <div className="flex items-start justify-between gap-2.5">
+        <div className="flex flex-col gap-2.5 py-3 pr-3 pl-4">
+          <div className="flex items-start gap-2">
             <Tooltip>
-              <TooltipTrigger render={<p className="line-clamp-2 flex-1 text-sm leading-snug font-bold text-card-foreground cursor-default border-0 outline-none" />}>
+              <TooltipTrigger render={<p className="line-clamp-2 min-w-0 flex-1 cursor-default text-[13px] leading-snug font-semibold text-card-foreground" />}>
                 {task.title}
               </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-xs font-normal z-50 border-0 outline-none">
+              <TooltipContent side="top" className="z-50 max-w-xs text-xs font-normal">
                 {task.title}
               </TooltipContent>
             </Tooltip>
@@ -176,44 +189,46 @@ function TaskNodeComponent({ data, selected }: NodeProps) {
               }
               aria-label={nextStatus ? `Move task to ${statusLabels[nextStatus]}` : "No further status available"}
               className={cn(
-                "nodrag mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-none border-0 outline-none",
+                "nodrag -mt-0.5 flex size-6 shrink-0 items-center justify-center border transition-colors outline-none",
                 isDone
-                  ? "bg-emerald-600 text-white"
-                  : "bg-background text-muted-foreground hover:text-primary",
-                !canAdvance && "cursor-not-allowed opacity-40"
+                  ? "cursor-default border-transparent bg-emerald-600 text-white"
+                  : "border-border/60 bg-background text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground",
+                !canAdvance && !isDone && "cursor-not-allowed opacity-40"
               )}
             >
-              {isDone ? <Check className="size-3" strokeWidth={3} /> : <ChevronRight className="size-3" strokeWidth={3} />}
+              {isDone ? <Check className="size-3.5" strokeWidth={3} /> : <ChevronRight className="size-3.5" strokeWidth={3} />}
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className={cn("px-2 py-0.5 text-[11px] font-semibold tracking-wider uppercase rounded-none border-0 outline-none", statusBadge[task.status])}>
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <span className={cn("border-0 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase", statusBadge[task.status])}>
               {statusLabels[task.status]}
             </span>
-            <span className={cn("px-2 py-0.5 text-[11px] font-semibold tracking-wider capitalize rounded-none border-0 outline-none", priorityBadge[task.priority])}>
+            <span className={cn("border-0 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider capitalize", priorityBadge[task.priority])}>
               {task.priority}
             </span>
+            {task.dueDate && (
+              <span className={cn("ml-auto flex items-center gap-1 text-[11px] font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
+                <Calendar className="size-3 shrink-0" />
+                {dueDateLabel}
+              </span>
+            )}
           </div>
 
-          {task.dueDate && (
-            <div className={cn("flex items-center gap-1.5 text-xs font-medium", overdue ? "text-destructive" : "text-muted-foreground")}>
-              <Calendar className="size-3.5 shrink-0" />
-              <span>{dueDateLabel}</span>
-            </div>
-          )}
-
-          {isBlocked && pendingBlockers.length > 0 && (
-            <div className="flex items-center gap-1.5 rounded-none border-0 outline-none bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive">
+          {isBlocked && (
+            <div
+              title={blockerTitle}
+              className="flex items-center gap-1.5 bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive"
+            >
               <AlertCircle className="size-3 shrink-0" />
-              <span className="truncate">Blocked by {pendingBlockers.map((d) => d.dependsOn.title).join(", ")}</span>
-            </div>
-          )}
-
-          {overdueBlockers.length > 0 && (
-            <div className="flex items-center gap-1.5 rounded-none border-0 outline-none bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-              <Clock className="size-3 shrink-0" />
-              <span className="truncate">Dependency overdue: {overdueBlockers.map((d) => d.dependsOn.title).join(", ")}</span>
+              <span className="truncate">{blockedLabel}</span>
+              {overdueBlockers.length > 0 && (
+                <>
+                  <span aria-hidden className="shrink-0 text-destructive/50">/</span>
+                  <span className="shrink-0">overdue</span>
+                  <Clock className="ml-auto size-3 shrink-0" />
+                </>
+              )}
             </div>
           )}
         </div>

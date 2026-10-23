@@ -93,8 +93,10 @@ export default async function MyProjectsList({
   }
 
   const workspaceIds = [...new Set(projects.map((p) => p.workspaceId))]
-  const memberRows = await getWorkspaceMembersForWorkspaces(workspaceIds)
-  const statsRows = await getProjectStats(projects.map((p) => p.id))
+  const [memberRows, statsRows] = await Promise.all([
+    getWorkspaceMembersForWorkspaces(workspaceIds),
+    getProjectStats(projects.map((p) => p.id)),
+  ])
   const statsById = new Map(statsRows.map((row) => [row.projectId, row]))
 
   const roleByWorkspace = new Map<string, WorkspaceRole | null>(

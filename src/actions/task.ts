@@ -2,7 +2,7 @@
 import { randomUUID } from "crypto"
 import { db } from "@/db"
 import { task, taskAssignees, taskDependencies, projectMembers } from "@/db/schemas"
-import { eq, and, or, inArray, sql } from "drizzle-orm"
+import { eq, and, or, inArray, sql, type SQL } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { after } from "next/server"
@@ -34,40 +34,55 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 /**
- * Returns true when the status was actually rewritten.
+ * Recomputes blocked/todo for a set of tasks in a single statement.
  *
- * This runs as one atomic UPDATE rather than a read-then-write pair. The previous
- * version read the status, computed the answer in JS, then wrote it back, so two
- * concurrent dependency edits on the same task could interleave and leave a stale
- * value. A single statement cannot: Postgres evaluates the WHERE and the new value
- * under one row lock. RETURNING gives us "did it actually change", which the
- * callers use to decide whether to notify.
+ * This runs as one atomic UPDATE rather than a read-then-write pair, and it
+ * updates the whole set at once instead of looping one HTTP request per task.
+ * The previous version read each dependent's status, computed the answer in JS,
+ * then wrote it back, so concurrent dependency edits could interleave and leave
+ * a stale value. RETURNING gives callers "which rows actually changed".
  *
  * db.transaction() is not an option here: the neon-http driver has none.
  */
-async function syncTaskBlocked(taskId: string) {
-    const rows = await db.execute(sql`
-        WITH pending AS (
-            SELECT EXISTS (
-                SELECT 1
-                FROM task_dependencies d
-                JOIN "task" dep ON dep.id = d.depends_on_id
-                WHERE d.task_id = ${taskId} AND dep.status <> 'done'
-            ) AS has_pending
+function blockedUpdate(targets: SQL) {
+    return sql`
+        WITH targets AS (${targets}),
+        pending AS (
+            SELECT t.task_id,
+                   EXISTS (
+                       SELECT 1
+                       FROM task_dependencies d
+                       JOIN "task" dep ON dep.id = d.depends_on_id
+                       WHERE d.task_id = t.task_id AND dep.status <> 'done'
+                   ) AS has_pending
+            FROM targets t
         )
         UPDATE "task" t
-        SET status = (CASE WHEN pending.has_pending THEN 'blocked' ELSE 'todo' END)::task_status,
+        SET status = (CASE WHEN p.has_pending THEN 'blocked' ELSE 'todo' END)::task_status,
             updated_at = now()
-        FROM pending
-        WHERE t.id = ${taskId}
+        FROM pending p
+        WHERE t.id = p.task_id
           AND (
-                (pending.has_pending AND t.status <> 'blocked')
-             OR (NOT pending.has_pending AND t.status = 'blocked')
+                (p.has_pending AND t.status <> 'blocked')
+             OR (NOT p.has_pending AND t.status = 'blocked')
           )
         RETURNING t.id
-    `)
+    `
+}
 
-    return (rows as unknown as { rows: unknown[] }).rows?.length > 0
+function changedIds(result: unknown): string[] {
+    return (result as { rows?: { id: string }[] }).rows?.map((row) => row.id) ?? []
+}
+
+async function syncTasksBlocked(taskIds: string[]): Promise<string[]> {
+    if (taskIds.length === 0) return []
+
+    const idList = sql.join(taskIds.map((id) => sql`${id}`), sql`, `)
+    const result = await db.execute(
+        blockedUpdate(sql`select unnest(array[${idList}]) as task_id`)
+    )
+
+    return changedIds(result)
 }
 
 /**
@@ -76,20 +91,13 @@ async function syncTaskBlocked(taskId: string) {
  * on one task can silently rewrite many others.
  */
 async function recomputeDependents(dependsOnId: string): Promise<string[]> {
-    const dependents = await db.query.taskDependencies.findMany({
-        where: eq(taskDependencies.dependsOnId, dependsOnId),
-        columns: { taskId: true },
-    })
+    const result = await db.execute(
+        blockedUpdate(
+            sql`select task_id from task_dependencies where depends_on_id = ${dependsOnId}`
+        )
+    )
 
-    const changed: string[] = []
-
-    for (const dependent of dependents) {
-        if (await syncTaskBlocked(dependent.taskId)) {
-            changed.push(dependent.taskId)
-        }
-    }
-
-    return changed
+    return changedIds(result)
 }
 
 async function notifyUnblockedDependents({
@@ -558,22 +566,10 @@ export async function deleteTask({
             )
         await db.delete(task).where(eq(task.id, taskId))
 
-        const unblockedDependentIds: string[] = []
-        for (const dependentId of dependentIds) {
-            await syncTaskBlocked(dependentId)
-        }
-
-        if (dependentIds.length > 0) {
-            const rows = await db.query.task.findMany({
-                where: inArray(task.id, dependentIds),
-                columns: { id: true, status: true },
-            })
-            for (const row of rows) {
-                if (statusBefore.get(row.id) === "blocked" && row.status === "todo") {
-                    unblockedDependentIds.push(row.id)
-                }
-            }
-        }
+        const changed = await syncTasksBlocked(dependentIds)
+        const unblockedDependentIds = changed.filter(
+            (id) => statusBefore.get(id) === "blocked"
+        )
 
         await notifyUnblockedDependents({
             actorId: session.user.id,
@@ -838,7 +834,7 @@ export async function addTaskDependency({
             dependsOnId,
         })
 
-        await syncTaskBlocked(taskId)
+        await syncTasksBlocked([taskId])
 
         const taskTitles = new Map(projectTaskIds.map((t) => [t.id, t.title]))
 
@@ -921,19 +917,14 @@ export async function removeTaskDependency({
         await db.delete(taskDependencies)
             .where(eq(taskDependencies.id, dependencyId))
 
-        await syncTaskBlocked(depRow.taskId)
-
-        const statusAfter = await db.query.task.findFirst({
-            where: eq(task.id, depRow.taskId),
-            columns: { status: true },
-        })
+        const changed = await syncTasksBlocked([depRow.taskId])
 
         const blocker = await db.query.task.findFirst({
             where: eq(task.id, depRow.dependsOnId),
             columns: { title: true },
         })
 
-        if (statusBefore?.status === "blocked" && statusAfter?.status === "todo") {
+        if (statusBefore?.status === "blocked" && changed.includes(depRow.taskId)) {
             await notifyUnblockedDependents({
                 actorId: session.user.id,
                 workspaceId: access.workspaceId,

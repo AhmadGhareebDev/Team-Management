@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { activity, workspaceMembers } from "@/db/schemas";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 export type ActivityFilters = {
     workspaceId?: string;
@@ -21,23 +21,21 @@ export async function getRecentActivityForUser(
         return { items: [], total: 0 };
     }
 
-    const memberships = await db.query.workspaceMembers.findMany({
-        where: eq(workspaceMembers.userId, userId),
-        columns: { workspaceId: true },
-    });
-
-    const workspaceIds = [...new Set(memberships.map((m) => m.workspaceId))];
-    if (workspaceIds.length === 0) {
-        return { items: [], total: 0 };
-    }
-
-    const scoped =
-        options.filters?.workspaceId &&
-        workspaceIds.includes(options.filters.workspaceId)
-            ? [options.filters.workspaceId]
-            : workspaceIds;
-
-    const where = inArray(activity.workspaceId, scoped);
+    // One query instead of a membership lookup followed by an activity lookup.
+    // The membership subquery also makes an explicit workspace filter safe: a
+    // workspace the user does not belong to yields no rows.
+    const where = and(
+        inArray(
+            activity.workspaceId,
+            db
+                .select({ workspaceId: workspaceMembers.workspaceId })
+                .from(workspaceMembers)
+                .where(eq(workspaceMembers.userId, userId))
+        ),
+        options.filters?.workspaceId
+            ? eq(activity.workspaceId, options.filters.workspaceId)
+            : undefined
+    );
 
     const [items, countRows] = await Promise.all([
         db.query.activity.findMany({

@@ -22,9 +22,9 @@ export const notificationTypeEnum = pgEnum("notification_type", [
 export const notification = pgTable("notification", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-  actorId: text("actor_id").references(() => user.id),
+  actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
   workspaceId: text("workspace_id").references(() => workspace.id, { onDelete: "cascade" }),
-  workspaceInvitationId: text("workspace_invitation_id").references(() => workspaceInvitation.id),
+  workspaceInvitationId: text("workspace_invitation_id").references(() => workspaceInvitation.id, { onDelete: "cascade" }),
   projectId: text("project_id").references(() => project.id, { onDelete: "cascade" }),
   taskId: text("task_id").references(() => task.id, { onDelete: "cascade" }),
   type: notificationTypeEnum("type").notNull(),

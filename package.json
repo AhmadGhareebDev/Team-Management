@@ -11,6 +11,8 @@
     "seed:reset": "tsx src/db/seed.ts --reset",
     "demo:seed": "tsx src/db/seed-demo.ts",
     "db:reset": "tsx src/db/reset.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage"

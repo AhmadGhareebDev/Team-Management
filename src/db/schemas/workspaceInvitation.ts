@@ -12,8 +12,8 @@ export const invitationStatusEnum = pgEnum("invitation_status", [
 export const workspaceInvitation = pgTable("workspace_invitation", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().references(() => workspace.id, { onDelete: "cascade" }),
-  inviterId: text("inviter_id").notNull().references(() => user.id),
-  inviteeId: text("invitee_id").notNull().references(() => user.id),
+  inviterId: text("inviter_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  inviteeId: text("invitee_id").notNull().references(() => user.id, { onDelete: "cascade" }),
   status: invitationStatusEnum("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

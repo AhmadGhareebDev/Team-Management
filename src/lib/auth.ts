@@ -11,6 +11,16 @@ export const auth = betterAuth({
         provider: "pg",
         schema: schema,
     }),
+    session: {
+        // Keep the signed session in a cookie so page renders and server
+        // actions do not make a database round trip just to read the session.
+        // Role and membership checks still query the database, so revoked
+        // access is unaffected; only the identity lookup is cached.
+        cookieCache: {
+            enabled: true,
+            maxAge: 5 * 60,
+        },
+    },
     rateLimit: {
     enabled: true,
     customRules: {

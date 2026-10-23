@@ -5,6 +5,7 @@ import { task } from "@/db/schemas/task";
 import { taskAssignees } from "@/db/schemas/taskAssignees";
 import { user } from "@/db/schemas/auth-schema";
 import { eq, and, inArray, asc, desc, ne, lte, ilike, or, sql, type SQL } from "drizzle-orm";
+import { cache } from "react";
 import { workspace } from "@/db/schemas"
 import type { TaskStatus } from "@/db/validations"
 import { PAGE_SIZES, type Paginated } from "@/lib/pagination";
@@ -33,7 +34,10 @@ export async function getUserWorkSpaces(userId: string) {
         }
     })
 }
-export type WorkspaceWithRole = Awaited<ReturnType<typeof getUserWorkSpaces>>[number];
+export type WorkspaceWithRole = Awaited<ReturnType<typeof getUserWorkSpaces>>[number] & {
+    projectCount?: number;
+    memberCount?: number;
+};
 
 export async function getUserWorkSpacesPage(
     userId: string,
@@ -68,6 +72,8 @@ export async function getUserWorkSpacesPage(
                     id: workspace.id,
                     name: workspace.name,
                 },
+                projectCount: sql<number>`(select count(*)::int from ${project} where ${project.workspaceId} = ${workspace.id})`,
+                memberCount: sql<number>`(select count(*)::int from ${workspaceMembers} where ${workspaceMembers.workspaceId} = ${workspace.id})`,
             })
             .from(workspaceMembers)
             .innerJoin(workspace, eq(workspace.id, workspaceMembers.workspaceId))
@@ -87,7 +93,7 @@ export async function getUserWorkSpacesPage(
     };
 }
 
-export  async function getWorkspaceById(workspaceId: string) {
+export const getWorkspaceById = cache(async (workspaceId: string) => {
     return await db.query.workspace.findFirst({
         where: eq(workspace.id , workspaceId),
         columns: {
@@ -96,10 +102,10 @@ export  async function getWorkspaceById(workspaceId: string) {
         }
 
     })
-}
+});
 export type Workspace = Awaited<ReturnType<typeof getWorkspaceById>>;
 
-export async function getUserWorkspaceRole(workspaceId: string, userId: string) {
+export const getUserWorkspaceRole = cache(async (workspaceId: string, userId: string) => {
     const membership = await db.query.workspaceMembers.findFirst({
         where: and(
             eq(workspaceMembers.workspaceId, workspaceId),
@@ -111,7 +117,7 @@ export async function getUserWorkspaceRole(workspaceId: string, userId: string) 
     })
 
     return membership?.role ?? null
-}
+});
 
 
 export type WorkspaceMemberWithUser = Awaited<

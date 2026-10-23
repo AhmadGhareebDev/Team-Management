@@ -5,8 +5,8 @@ import { relations } from "drizzle-orm";
 
 export const taskDependencies = pgTable("task_dependencies", {
     id: text("id").primaryKey(),
-    taskId: text("task_id").notNull(),
-    dependsOnId: text("depends_on_id").notNull(),
+    taskId: text("task_id").notNull().references(() => task.id, { onDelete: "cascade" }),
+    dependsOnId: text("depends_on_id").notNull().references(() => task.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("task_dependencies_task_id_idx").on(table.taskId),
