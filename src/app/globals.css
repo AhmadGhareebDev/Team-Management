@@ -213,7 +213,7 @@
   }
 }
 
-/* React Flow dark mode */
+/* React Flow chrome */
 .dark .react-flow__node {
   background: var(--card);
   color: var(--card-foreground);
@@ -224,24 +224,82 @@
   stroke: var(--muted-foreground);
 }
 
-.dark .react-flow__controls {
-  background: var(--card);
-  border-color: var(--border);
+.react-flow__edge .react-flow__edge-path {
+  transition:
+    stroke 150ms ease,
+    opacity 150ms ease;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--primary) !important;
+  opacity: 1 !important;
+}
+
+.react-flow__connection-path {
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.react-flow__controls {
+  border: 1px solid var(--border);
+  border-radius: 0;
   box-shadow: none;
+  overflow: hidden;
 }
 
-.dark .react-flow__controls button {
+.react-flow__controls button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   background: var(--card);
-  color: var(--card-foreground);
-  border-color: var(--border);
+  color: var(--muted-foreground);
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
-.dark .react-flow__controls button:hover {
+.react-flow__controls button:last-child {
+  border-bottom: 0;
+}
+
+.react-flow__controls button:hover {
   background: var(--accent);
+  color: var(--foreground);
 }
 
-.dark .react-flow__controls button svg {
-  fill: var(--card-foreground);
+.react-flow__controls button svg {
+  fill: currentColor;
+}
+
+.react-flow__handle {
+  transition: background-color 150ms ease;
+}
+
+.canvas-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.canvas-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.canvas-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.canvas-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.canvas-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .react-flow__pane {

@@ -2,7 +2,7 @@
 import { randomUUID } from "crypto"
 import { db } from "@/db"
 import { task, taskAssignees, taskDependencies, projectMembers } from "@/db/schemas"
-import { eq, and, or, inArray, sql, type SQL } from "drizzle-orm"
+import { eq, and, or, inArray } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { after } from "next/server"
@@ -24,80 +24,14 @@ import { createNotification, clearTaskDateNotifications } from "@/lib/notificati
 import { recordActivity, getUserNames } from "@/lib/activity"
 import { publishCanvasUpserts, publishCanvasDeletes, publishWorkspaceInvalidation } from "@/lib/ably-server"
 import { buildDependencyGraph, wouldCreateCycle } from "@/lib/dependency-graph"
-const SPACING = 80
+import { createTasksCore } from "@/lib/tasks/create-tasks"
+import { syncTasksBlocked, recomputeDependents } from "@/lib/tasks/blocked"
 
 /** Postgres unique violation. Used to turn a lost insert race into a domain error. */
 function isUniqueViolation(error: unknown): boolean {
     if (typeof error !== "object" || error === null) return false
     const e = error as { code?: unknown; cause?: { code?: unknown } }
     return e.code === "23505" || e.cause?.code === "23505"
-}
-
-/**
- * Recomputes blocked/todo for a set of tasks in a single statement.
- *
- * This runs as one atomic UPDATE rather than a read-then-write pair, and it
- * updates the whole set at once instead of looping one HTTP request per task.
- * The previous version read each dependent's status, computed the answer in JS,
- * then wrote it back, so concurrent dependency edits could interleave and leave
- * a stale value. RETURNING gives callers "which rows actually changed".
- *
- * db.transaction() is not an option here: the neon-http driver has none.
- */
-function blockedUpdate(targets: SQL) {
-    return sql`
-        WITH targets AS (${targets}),
-        pending AS (
-            SELECT t.task_id,
-                   EXISTS (
-                       SELECT 1
-                       FROM task_dependencies d
-                       JOIN "task" dep ON dep.id = d.depends_on_id
-                       WHERE d.task_id = t.task_id AND dep.status <> 'done'
-                   ) AS has_pending
-            FROM targets t
-        )
-        UPDATE "task" t
-        SET status = (CASE WHEN p.has_pending THEN 'blocked' ELSE 'todo' END)::task_status,
-            updated_at = now()
-        FROM pending p
-        WHERE t.id = p.task_id
-          AND (
-                (p.has_pending AND t.status <> 'blocked')
-             OR (NOT p.has_pending AND t.status = 'blocked')
-          )
-        RETURNING t.id
-    `
-}
-
-function changedIds(result: unknown): string[] {
-    return (result as { rows?: { id: string }[] }).rows?.map((row) => row.id) ?? []
-}
-
-async function syncTasksBlocked(taskIds: string[]): Promise<string[]> {
-    if (taskIds.length === 0) return []
-
-    const idList = sql.join(taskIds.map((id) => sql`${id}`), sql`, `)
-    const result = await db.execute(
-        blockedUpdate(sql`select unnest(array[${idList}]) as task_id`)
-    )
-
-    return changedIds(result)
-}
-
-/**
- * Re-evaluates every task blocked by `dependsOnId`. Returns the ids whose
- * status changed so callers can tell other viewers about them; a status change
- * on one task can silently rewrite many others.
- */
-async function recomputeDependents(dependsOnId: string): Promise<string[]> {
-    const result = await db.execute(
-        blockedUpdate(
-            sql`select task_id from task_dependencies where depends_on_id = ${dependsOnId}`
-        )
-    )
-
-    return changedIds(result)
 }
 
 async function notifyUnblockedDependents({
@@ -187,23 +121,19 @@ export async function createTask({
         return { success: false, error: "FORBIDDEN" }
     }
 
-    const existing = await db.query.task.findMany({
-        where: eq(task.projectId, projectId),
-        columns: { id: true },
+    const result = await createTasksCore({
+        projectId,
+        actor: { userId: session.user.id, canManage: true },
+        items: [{ title: parsed.data.title, description: parsed.data.description ?? null }],
     })
 
-    try {
-        const newTaskId = randomUUID()
-        await db.insert(task).values({
-            id: newTaskId,
-            projectId,
-            createdBy: session.user.id,
-            title: parsed.data.title,
-            description: parsed.data.description,
-            positionX: existing.length * SPACING,
-            positionY: existing.length * SPACING,
-        })
+    if (!result.ok) {
+        return { success: false, error: result.error }
+    }
 
+    const newTaskId = result.taskIds[0]
+
+    try {
         await recordActivity({
             workspaceId: access.workspaceId,
             projectId,

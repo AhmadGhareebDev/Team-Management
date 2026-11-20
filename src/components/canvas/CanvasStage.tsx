@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type RefObject } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -98,6 +98,61 @@ function FocusOnTask({ taskId }: { taskId?: string | null }) {
   return null
 }
 
+function FitOnGrowth({ count }: { count: number }) {
+  const { fitView } = useReactFlow()
+  const previous = useRef(count)
+
+  useEffect(() => {
+    if (count > previous.current) {
+      previous.current = count
+      const timer = window.setTimeout(() => {
+        void fitView({ padding: 0.2, duration: 500 })
+      }, 160)
+      return () => window.clearTimeout(timer)
+    }
+    previous.current = count
+  }, [count, fitView])
+
+  return null
+}
+
+function FitOnResize({
+  containerRef,
+}: {
+  containerRef: RefObject<HTMLDivElement | null>
+}) {
+  const { fitView } = useReactFlow()
+
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element) return
+
+    let first = true
+    let timer: number | undefined
+
+    const observer = new ResizeObserver(() => {
+      if (first) {
+        first = false
+        return
+      }
+
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        void fitView({ padding: 0.2, duration: 250 })
+      }, 220)
+    })
+
+    observer.observe(element)
+
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(timer)
+    }
+  }, [containerRef, fitView])
+
+  return null
+}
+
 export default function CanvasStage({
   tasks,
   projectId,
@@ -126,8 +181,29 @@ export default function CanvasStage({
   const [, startDeleteTransition] = useTransition()
 
   const nodeTypes = useMemo(() => ({ task: TaskNode }), [])
+  const canvasRef = useRef<HTMLDivElement>(null)
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialTaskId)
+
+  const boardStats = useMemo(() => {
+    let blocked = 0
+    let done = 0
+    for (const item of tasks) {
+      if (item.status === "blocked") blocked += 1
+      else if (item.status === "done") done += 1
+    }
+    return { total: tasks.length, blocked, done }
+  }, [tasks])
+
+  const focusQuickTask = useCallback(() => {
+    const focus = () => document.getElementById("quick-task-input")?.focus()
+    if (isBarVisible) {
+      window.setTimeout(focus, 60)
+      return
+    }
+    setIsBarVisible(true)
+    window.setTimeout(focus, 320)
+  }, [isBarVisible])
 
   const form = useForm<InsertTaskSchemaType>({
     resolver: zodResolver(insertTaskSchema),
@@ -564,7 +640,11 @@ export default function CanvasStage({
   const selectedTask = selectedTaskId ? displayedTaskData[selectedTaskId] ?? null : null
 
   return (
-    <div className="relative h-full w-full bg-background select-none cursor-default overflow-hidden">
+    <div className="relative flex h-full w-full overflow-hidden bg-background">
+      <div
+        ref={canvasRef}
+        className="relative h-full min-w-0 flex-1 cursor-default overflow-hidden select-none"
+      >
       {realtimeElements}
       <style>{`
         .react-flow {
@@ -578,154 +658,203 @@ export default function CanvasStage({
         }
       `}</style>
 
-      {/* Top Bar Wrapper with Collapsible Transition */}
+      {/* Toolbar */}
       <div
-        className={`absolute inset-x-0 top-0 z-20 transition-transform duration-300 ease-in-out ${
+        className={cn(
+          "absolute inset-x-0 top-0 z-20 transition-transform duration-300 ease-in-out motion-reduce:transition-none",
           isBarVisible ? "translate-y-0" : "-translate-y-full"
-        }`}
+        )}
       >
-        <div className="flex justify-center px-4 pt-4 pointer-events-none">
-          <div className="relative pointer-events-auto flex w-full max-w-3xl flex-wrap items-center gap-3 rounded-none border-0 bg-card px-4 py-2 transition-colors max-sm:px-3 max-sm:gap-2">
-            <Link
-              href={`/workspaces/${workspaceId}`}
-              className={buttonVariants({ variant: "ghost", size: "icon-sm", className: "rounded-none hover:bg-accent text-muted-foreground hover:text-foreground shrink-0" })}
-            >
-              <ArrowLeft className="size-4" />
-            </Link>
-
-            {isManager && (
+        <div className="px-3 pt-3">
+          <div className="border border-border bg-card select-text">
+            <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5">
               <Link
-                href={`/workspaces/${workspaceId}/project/${project.id}/dashboard`}
+                href={`/workspaces/${workspaceId}`}
+                aria-label="Back to workspace"
+                title="Back to workspace"
                 className={buttonVariants({
                   variant: "ghost",
-                  size: "xs",
+                  size: "icon-sm",
                   className:
-                    "rounded-none px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground",
+                    "rounded-none text-muted-foreground hover:bg-accent hover:text-foreground",
                 })}
-                aria-label="Project dashboard"
-                title="Project dashboard"
               >
-                <LayoutDashboard className="size-4" />
-                <span className="hidden sm:inline">Dashboard</span>
+                <ArrowLeft className="size-4" />
               </Link>
-            )}
 
-            <div className="min-w-0 flex-1">
-              <h1 className="truncate text-xs font-semibold text-foreground tracking-tight">{project.name}</h1>
-              {project.description && <p className="truncate text-[11px] text-muted-foreground">{project.description}</p>}
-            </div>
+              <span className="mx-0.5 hidden h-5 w-px bg-border sm:block" />
 
-            {project.members.length > 0 && (
-              <div className="group/members relative z-20 shrink-0" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => setIsMembersOpen((open) => !open)}
-                  aria-label="Show project members"
-                  aria-expanded={isMembersOpen}
-                  className="flex cursor-pointer"
+              {isManager && (
+                <Link
+                  href={`/workspaces/${workspaceId}/project/${project.id}/dashboard`}
+                  aria-label="Project dashboard"
+                  title="Project dashboard"
+                  className={buttonVariants({
+                    variant: "ghost",
+                    size: "xs",
+                    className:
+                      "rounded-none px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground max-sm:hidden",
+                  })}
                 >
-                  <AvatarGroup>
-                    {project.members.slice(0, MAX_MEMBERS).map((m) => (
-                      <ImageKitAvatar
-                        key={m.user.id}
-                        src={m.user.avatar_url}
-                        alt={m.user.name}
-                        initials={getInitials(m.user.name)}
-                        size={24}
-                        className="size-6 rounded-full ring-2 ring-card"
-                      />
-                    ))}
-                    {project.members.length > MAX_MEMBERS && (
-                      <AvatarGroupCount className="bg-muted text-muted-foreground ring-2 ring-card text-[10px]">
-                        +{project.members.length - MAX_MEMBERS}
-                      </AvatarGroupCount>
-                    )}
-                  </AvatarGroup>
-                </button>
+                  <LayoutDashboard className="size-4" />
+                  <span className="hidden xl:inline">Dashboard</span>
+                </Link>
+              )}
 
-                <div
-                  className={cn(
-                    "absolute top-full right-0 z-30 mt-3 min-w-56 rounded-none border-0 bg-popover p-2 transition-opacity",
-                    isMembersOpen
-                      ? "visible opacity-100"
-                      : "invisible opacity-0 group-hover/members:visible group-hover/members:opacity-100"
+              <div className="min-w-0 flex-1 px-1">
+                <div className="flex items-center gap-2">
+                  <span className="size-1.5 shrink-0 bg-primary" aria-hidden="true" />
+                  <h1 className="truncate text-xs font-semibold tracking-tight text-foreground">
+                    {project.name}
+                  </h1>
+                </div>
+                <p className="mt-0.5 truncate text-[10px] leading-relaxed text-muted-foreground">
+                  <span>{boardStats.total} tasks</span>
+                  <span className="mx-1">·</span>
+                  <span className={boardStats.blocked > 0 ? "text-destructive" : undefined}>
+                    {boardStats.blocked} blocked
+                  </span>
+                  <span className="mx-1">·</span>
+                  <span>{boardStats.done} done</span>
+                  {project.description && (
+                    <span className="hidden xl:inline"> · {project.description}</span>
                   )}
+                </p>
+              </div>
+
+              {project.members.length > 0 && (
+                <div
+                  className="group/members relative z-20 hidden shrink-0 sm:block"
+                  onClick={(event) => event.stopPropagation()}
                 >
-                  <p className="px-2 pt-1 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                    {project.members.length} {project.members.length === 1 ? "member" : "members"}
-                  </p>
-                  <div className="space-y-0.5">
-                    {project.members.map((m) => (
-                      <div key={m.user.id} className="flex items-center gap-2.5 rounded-none px-2 py-1.5 hover:bg-accent hover:text-accent-foreground transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setIsMembersOpen((open) => !open)}
+                    aria-label="Show project members"
+                    aria-expanded={isMembersOpen}
+                    aria-haspopup="dialog"
+                    className="flex cursor-pointer focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    <AvatarGroup>
+                      {project.members.slice(0, MAX_MEMBERS).map((member) => (
                         <ImageKitAvatar
-                          src={m.user.avatar_url}
-                          alt={m.user.id === currentUserId ? "You" : m.user.name}
-                          initials={getInitials(m.user.name)}
+                          key={member.user.id}
+                          src={member.user.avatar_url}
+                          alt={member.user.name}
+                          initials={getInitials(member.user.name)}
                           size={24}
-                          className="size-6 rounded-full shrink-0"
+                          className="size-6 rounded-full ring-2 ring-card"
                         />
-                        <div className="min-w-0 leading-tight">
-                          <p className="truncate text-xs font-medium text-popover-foreground">
-                            {m.user.id === currentUserId ? "You" : m.user.name}
-                          </p>
-                          <p className="truncate text-[10px] text-muted-foreground">@{m.user.username}</p>
+                      ))}
+                      {project.members.length > MAX_MEMBERS && (
+                        <AvatarGroupCount className="bg-muted text-[10px] text-muted-foreground ring-2 ring-card">
+                          +{project.members.length - MAX_MEMBERS}
+                        </AvatarGroupCount>
+                      )}
+                    </AvatarGroup>
+                  </button>
+
+                  <div
+                    className={cn(
+                      "absolute top-full right-0 z-30 mt-2 max-h-80 min-w-56 overflow-y-auto border border-border bg-popover p-2 transition-opacity canvas-scroll",
+                      isMembersOpen
+                        ? "visible opacity-100"
+                        : "invisible opacity-0 group-hover/members:visible group-hover/members:opacity-100"
+                    )}
+                  >
+                    <p className="px-2 pt-1 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                      {project.members.length}{" "}
+                      {project.members.length === 1 ? "member" : "members"}
+                    </p>
+                    <div className="space-y-0.5">
+                      {project.members.map((member) => (
+                        <div
+                          key={member.user.id}
+                          className="flex items-center gap-2.5 px-2 py-1.5 transition-colors hover:bg-accent hover:text-accent-foreground"
+                        >
+                          <ImageKitAvatar
+                            src={member.user.avatar_url}
+                            alt={member.user.id === currentUserId ? "You" : member.user.name}
+                            initials={getInitials(member.user.name)}
+                            size={24}
+                            className="size-6 shrink-0 rounded-full"
+                          />
+                          <div className="min-w-0 leading-tight">
+                            <p className="truncate text-xs font-medium text-popover-foreground">
+                              {member.user.id === currentUserId ? "You" : member.user.name}
+                            </p>
+                            <p className="truncate text-[10px] text-muted-foreground">
+                              @{member.user.username}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {isManager && (
-              <form onSubmit={form.handleSubmit(handleAddTask)} className="flex shrink-0 items-center gap-1.5 pl-2 border-l border-border/60 max-sm:order-last max-sm:w-full max-sm:border-l-0 max-sm:pl-0">
-                <div className="relative">
-                  <Input
-                    {...form.register("title")}
-                    placeholder="New task..."
-                    className="h-7 w-36 rounded-none bg-background/60 px-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring border-border/60 max-md:flex-1 max-md:w-auto"
-                  />
-                  {form.formState.errors.title && (
-                    <FieldError
-                      errors={[form.formState.errors.title]}
-                      className="absolute top-full right-0 z-30 mt-1.5 rounded-none bg-destructive px-2 py-1 text-[10px] text-destructive-foreground shadow-md"
-                    />
-                  )}
-                </div>
-                <Button
-                  type="submit"
-                  size="icon-sm"
-                  disabled={isCreatePending}
-                  aria-label="Add task"
-                  className="size-7 rounded-none bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
+              {isManager && (
+                <form
+                  onSubmit={form.handleSubmit(handleAddTask)}
+                  className="order-last flex w-full shrink-0 items-center gap-1.5 border-t border-border/60 pt-1.5 sm:order-none sm:w-auto sm:border-0 sm:border-l sm:pt-0 sm:pl-2"
                 >
-                  {isCreatePending ? <Spinner className="size-3" /> : <Plus className="size-3.5" />}
-                </Button>
-              </form>
-            )}
+                  <div className="relative min-w-0 flex-1 sm:w-44 sm:flex-none">
+                    <Input
+                      {...form.register("title")}
+                      id="quick-task-input"
+                      aria-label="New task title"
+                      placeholder="Add a task…"
+                      className="h-7 w-full rounded-none border-border/60 bg-background/60 px-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                    />
+                    {form.formState.errors.title && (
+                      <FieldError
+                        errors={[form.formState.errors.title]}
+                        className="absolute top-full right-0 z-30 mt-1.5 rounded-none bg-destructive px-2 py-1 text-[10px] text-destructive-foreground shadow-md"
+                      />
+                    )}
+                  </div>
+                  <Button
+                    type="submit"
+                    size="icon-sm"
+                    disabled={isCreatePending}
+                    aria-label="Add task"
+                    title="Add task"
+                    className="size-7 shrink-0 rounded-none bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    {isCreatePending ? (
+                      <Spinner className="size-3" />
+                    ) : (
+                      <Plus className="size-3.5" />
+                    )}
+                  </Button>
+                </form>
+              )}
 
-            {/* Hide Arrow Button (Centered at the top edge of the bar) */}
-            <button
-              type="button"
-              onClick={() => setIsBarVisible(false)}
-              title="Hide Bar"
-              className="absolute -top-3 left-1/2 -translate-x-1/2 flex size-6 items-center justify-center rounded-none border-0 bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors pointer-events-auto"
-            >
-              <ChevronUp className="size-3.5" />
-            </button>
+              <button
+                type="button"
+                onClick={() => setIsBarVisible(false)}
+                aria-label="Hide toolbar"
+                title="Hide toolbar"
+                className="flex size-9 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none lg:size-7"
+              >
+                <ChevronUp className="size-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Show Arrow Button (Popping from top canvas edge when hidden) */}
       {!isBarVisible && (
         <button
           type="button"
           onClick={() => setIsBarVisible(true)}
-          title="Show Bar"
-          className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex h-6 w-10 items-center justify-center rounded-none border-0 bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          aria-label="Show toolbar"
+          title="Show toolbar"
+          className="absolute top-0 left-1/2 z-20 flex h-9 w-32 -translate-x-1/2 items-center justify-center gap-1.5 border-x border-b border-border bg-card text-[10px] font-semibold tracking-wider text-muted-foreground uppercase transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none lg:h-7 lg:w-28"
         >
-          <ChevronDown className="size-4" />
+          <ChevronDown className="size-3.5" />
+          Toolbar
         </button>
       )}
 
@@ -741,6 +870,7 @@ export default function CanvasStage({
         onEdgesDelete={handleEdgesDelete}
         onNodesDelete={handleNodesDelete}
         onNodeClick={(_event, node) => setSelectedTaskId(node.id)}
+        onPaneClick={() => setSelectedTaskId(null)}
         deleteKeyCode={["Backspace", "Delete"]}
         fitView
         fitViewOptions={{ padding: 0.8, minZoom: 0.3 }}
@@ -751,19 +881,63 @@ export default function CanvasStage({
         nodesConnectable={isManager}
         onlyRenderVisibleElements
       >
-        <Background 
-          variant={BackgroundVariant.Dots} 
-          gap={24} 
-          size={1.5} 
-          color="currentColor" 
-          className="text-slate-400 dark:text-slate-600 opacity-60" 
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={22}
+          size={1}
+          color="currentColor"
+          className="text-border"
         />
-        <Controls className="!rounded-none !border-0 bg-card overflow-hidden" />
+        <Controls position="bottom-right" showInteractive={false} />
         <FocusOnTask taskId={initialTaskId} />
+        <FitOnGrowth count={tasks.length} />
+        <FitOnResize containerRef={canvasRef} />
       </ReactFlow>
+
+      {tasks.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6 pt-24 pb-20">
+          <div className="pointer-events-auto w-full max-w-sm border border-border bg-card p-6 text-center">
+            <div className="mx-auto flex size-10 items-center justify-center border border-border bg-muted/20">
+              <LayoutDashboard className="size-5 text-primary" />
+            </div>
+            <h2 className="mt-4 text-sm font-semibold text-foreground">
+              This board is a blank canvas
+            </h2>
+            <p className="mx-auto mt-1.5 max-w-72 text-xs leading-relaxed text-muted-foreground">
+              Add the first task to start shaping this board.
+            </p>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
+              {isManager && (
+                <Button
+                  size="sm"
+                  onClick={focusQuickTask}
+                  className="rounded-none"
+                >
+                  <Plus className="size-3.5" />
+                  Add first task
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-3 p-3">
+        <div className="pointer-events-auto flex items-center gap-2 border border-border bg-card px-2.5 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+          <span className="size-1.5 shrink-0 bg-primary" aria-hidden="true" />
+          <span>{boardStats.total} tasks</span>
+          <span className="h-3 w-px bg-border" aria-hidden="true" />
+          <span className={boardStats.blocked > 0 ? "text-destructive" : undefined}>
+            {boardStats.blocked} blocked
+          </span>
+          <span className="h-3 w-px bg-border" aria-hidden="true" />
+          <span>{boardStats.done} done</span>
+        </div>
+      </div>
 
       {selectedTask && (
         <TaskDetailsPanel
+          key={selectedTask.id}
           open={true}
           onOpenChange={(open) => {
             if (!open) setSelectedTaskId(null)
@@ -775,6 +949,8 @@ export default function CanvasStage({
           optimistic={optimisticApi}
         />
       )}
+
+      </div>
     </div>
   )
 }

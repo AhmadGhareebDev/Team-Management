@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useState, useTransition } from "react"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Calendar, Check, Trash2, X, Clock } from "lucide-react"
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select"
 import { ImageKitAvatar } from "@/components/web/ImageKitAvatar"
 import { allowedTaskTransitions, TASK_STATUSES, updateTaskSchema, type TaskStatus } from "@/db/validations"
-import { statusBadge, statusLabels } from "@/lib/task-display"
+import { statusBadge, statusLabels, statusLeftAccent } from "@/lib/task-display"
 import type { ProjectTask } from "@/db/queries/task"
 import type { ProjectWithMembers } from "@/db/queries/project"
 import type { OptimisticApi } from "@/components/canvas/TaskNode"
@@ -70,12 +70,17 @@ export default function TaskDetailsPanel({
   const allowedStatuses = allowedTaskTransitions(task.status)
   const canPickStatus = canToggleStatus && !isBlocked && allowedStatuses.length > 0
 
+  // Each task mounts a fresh panel, so form defaults and assignee selection
+  // are initialized once from the current task rather than synchronized.
+  const [baselineUserIds, setBaselineUserIds] = useState<string[]>(() =>
+    task.assignees.map((a) => a.user.id)
+  )
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>(() => task.assignees.map((a) => a.user.id))
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const assigneesDirty =
-    selectedUserIds.length !== task.assignees.length ||
-    !selectedUserIds.every((id) => task.assignees.some((a) => a.user.id === id))
+    selectedUserIds.length !== baselineUserIds.length ||
+    !selectedUserIds.every((id) => baselineUserIds.includes(id))
 
   const detailsForm = useForm<z.input<typeof updateTaskSchema>, unknown, z.output<typeof updateTaskSchema>>({
     resolver: zodResolver(updateTaskSchema),
@@ -87,19 +92,7 @@ export default function TaskDetailsPanel({
       dueDate: task.dueDate ? toDateInputValue(task.dueDate) : "",
     },
   })
-
-  // Synchronize internal state smoothly when task selection changes
-  useEffect(() => {
-    if (!open) return
-    detailsForm.reset({
-      title: task.title,
-      description: task.description ?? "",
-      priority: task.priority,
-      dueDate: task.dueDate ? toDateInputValue(task.dueDate) : "",
-    })
-    setSelectedUserIds(task.assignees.map((a) => a.user.id))
-    setConfirmDelete(false)
-  }, [open, task.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const selectedPriority = useWatch({ control: detailsForm.control, name: "priority" })
 
   const handleStatusChange = (next: unknown) => {
     if (!canToggleStatus || isBlocked) return
@@ -116,6 +109,12 @@ export default function TaskDetailsPanel({
         dueDate: data.dueDate || null,
       })
     })
+    detailsForm.reset({
+      title: data.title,
+      description: data.description ?? "",
+      priority: data.priority,
+      dueDate: data.dueDate || "",
+    })
   }
 
   const toggleAssignee = (userId: string) => {
@@ -124,6 +123,7 @@ export default function TaskDetailsPanel({
   }
 
   const handleSaveAssignees = () => {
+    setBaselineUserIds(selectedUserIds)
     startTransition(() => {
       optimistic.setAssignees(task.id, selectedUserIds)
     })
@@ -137,26 +137,40 @@ export default function TaskDetailsPanel({
   if (!open) return null
 
   return (
-    <aside className="absolute top-0 right-0 z-40 flex h-full w-80 flex-col border-0 bg-card max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:h-auto max-md:max-h-[80dvh] max-md:w-full max-md:border-t">
+    <aside
+      role="complementary"
+      aria-label="Task details"
+      className="absolute top-0 right-0 z-40 flex h-full w-[min(23rem,100%)] flex-col border-l border-border bg-card select-text max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:h-auto max-md:max-h-[85dvh] max-md:w-full max-md:border-t max-md:border-l-0"
+    >
+      <div
+        className={cn("absolute inset-x-0 top-0 h-0.5", statusLeftAccent[task.status])}
+        aria-hidden="true"
+      />
+
       {/* Header */}
-      <div className="shrink-0 flex items-center justify-between border-0 border-b border-border/50 bg-muted/30 px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3 pt-3.5">
         <div className="min-w-0 flex-1 pr-2">
-          <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Task Details</p>
-          <p className="truncate text-sm font-semibold text-foreground leading-snug">{task.title}</p>
+          <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+            Task details
+          </p>
+          <p className="truncate text-sm leading-snug font-semibold text-foreground">
+            {task.title}
+          </p>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon-sm" 
-          onClick={() => onOpenChange(false)} 
-          aria-label="Close task details" 
-          className="shrink-0 text-muted-foreground hover:text-foreground"
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onOpenChange(false)}
+          aria-label="Close task details"
+          title="Close task details"
+          className="shrink-0 rounded-none text-muted-foreground hover:text-foreground"
         >
           <X className="size-4" />
         </Button>
       </div>
 
       {/* Scrollable Body */}
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin">
+      <div className="canvas-scroll min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
         {/* Status Section */}
         <div className="space-y-2">
           <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Status</p>
@@ -232,15 +246,17 @@ export default function TaskDetailsPanel({
         <form onSubmit={detailsForm.handleSubmit(handleSave)} className="space-y-3">
           <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Details</p>
 
-          <Input 
-            {...detailsForm.register("title")} 
-            placeholder="Task title" 
-            disabled={!isManager} 
-            className="text-xs bg-muted/20 border-border/60 focus-visible:ring-1" 
+          <Input
+            {...detailsForm.register("title")}
+            aria-label="Task title"
+            placeholder="Task title"
+            disabled={!isManager}
+            className="rounded-none border-border/60 bg-muted/20 text-xs focus-visible:ring-1"
           />
 
           <textarea
             {...detailsForm.register("description")}
+            aria-label="Task description"
             placeholder="Description..."
             disabled={!isManager}
             rows={3}
@@ -249,28 +265,30 @@ export default function TaskDetailsPanel({
 
           <div className="relative">
             <Calendar className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input 
-              {...detailsForm.register("dueDate")} 
-              type="date" 
-              disabled={!isManager} 
-              className="pl-9 text-xs bg-muted/20 border-border/60 focus-visible:ring-1" 
+            <Input
+              {...detailsForm.register("dueDate")}
+              aria-label="Due date"
+              type="date"
+              disabled={!isManager}
+              className="rounded-none border-border/60 bg-muted/20 pl-9 text-xs focus-visible:ring-1"
             />
           </div>
 
           {/* Priority Options */}
           <div className="flex flex-wrap gap-1.5 pt-1">
             {PRIORITIES.map((priority) => {
-              const active = detailsForm.watch("priority") === priority.value
+              const active = selectedPriority === priority.value
               return (
                 <button
                   key={priority.value}
                   type="button"
                   disabled={!isManager}
+                  aria-pressed={active}
                   onClick={() => detailsForm.setValue("priority", priority.value, { shouldDirty: true, shouldValidate: true })}
                   className={cn(
-                    "rounded-none border-0 px-2.5 py-1 text-[11px] font-semibold capitalize transition-colors",
-                    active 
-                      ? "border-primary bg-primary text-primary-foreground shadow-xs" 
+                    "rounded-none border-0 px-2.5 py-1 text-[11px] font-semibold uppercase transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
                       : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
                     !isManager && "cursor-not-allowed opacity-60"
                   )}
@@ -285,8 +303,13 @@ export default function TaskDetailsPanel({
             <p className="text-xs text-destructive">{detailsForm.formState.errors.root.message}</p>
           )}
 
-{isManager && (
-            <Button type="submit" size="sm" disabled={isPending} className="w-full mt-2 font-medium">
+          {isManager && (
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isPending || !detailsForm.formState.isDirty}
+              className="mt-2 w-full rounded-none font-medium"
+            >
               Save details
             </Button>
           )}
@@ -295,7 +318,7 @@ export default function TaskDetailsPanel({
         {/* Assignees Section */}
         <div className="space-y-2">
           <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Assignees</p>
-          <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-none border border-border/50 bg-muted/20 p-1.5 scrollbar-thin">
+          <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-none border border-border/50 bg-muted/20 p-1.5 canvas-scroll">
             {members.length === 0 && (
               <p className="px-2 py-1.5 text-xs text-muted-foreground">No members in this project yet.</p>
             )}
@@ -306,10 +329,11 @@ export default function TaskDetailsPanel({
                   key={m.user.id}
                   type="button"
                   disabled={!isManager}
+                  aria-pressed={selectedItem}
                   onClick={() => toggleAssignee(m.user.id)}
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-none px-2 py-1.5 text-left transition-colors",
-                    selectedItem ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50 text-foreground",
+                    "flex w-full items-center gap-2.5 rounded-none px-2 py-1.5 text-left transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
+                    selectedItem ? "bg-primary/10 font-medium text-primary" : "text-foreground hover:bg-muted/50",
                     !isManager && "cursor-default"
                   )}
                 >
@@ -354,8 +378,8 @@ export default function TaskDetailsPanel({
               </Button>
             ) : (
               <div className="flex flex-col gap-2 rounded-none border border-destructive/20 bg-destructive/10 p-3">
-                <p className="text-xs text-destructive font-medium leading-normal">
-                  
+                <p className="text-xs leading-normal font-medium text-destructive">
+                  Delete this task? This also removes its dependency links.
                 </p>
                 <div className="flex gap-2 pt-1">
                   <Button variant="destructive" size="sm" className="flex-1 h-7 text-xs" onClick={handleDelete}>

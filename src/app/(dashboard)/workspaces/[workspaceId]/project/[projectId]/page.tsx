@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { getProjectById, getUserProjectAccess } from "@/db/queries/project"
 import CanvasStage from "@/components/canvas/CanvasStage"
+import { ProjectChat } from "@/components/assistant/ProjectChat"
 import { getProjectTasks } from "@/db/queries/task"
 import type { Metadata } from "next"
 
@@ -95,16 +96,19 @@ export default async function ProjectCanvasPage({
             : null
 
     return (
-        <div className="-m-6 max-sm:-m-4 h-[calc(100dvh-3.5rem)] overflow-hidden">
-            <CanvasStage
-                tasks={tasks}
-                projectId={projectId}
-                role={role}
-                project={project}
-                workspaceId={workspaceId}
-                currentUserId={session!.user.id}
-                initialTaskId={initialTaskId}
-            />
+        <div className="relative -m-6 flex h-[calc(100dvh-3.5rem)] overflow-hidden max-sm:-m-4">
+            <ProjectChat projectId={projectId} projectName={project.name} />
+            <div className="relative h-full min-w-0 flex-1 overflow-hidden">
+                <CanvasStage
+                    tasks={tasks}
+                    projectId={projectId}
+                    role={role}
+                    project={project}
+                    workspaceId={workspaceId}
+                    currentUserId={session!.user.id}
+                    initialTaskId={initialTaskId}
+                />
+            </div>
         </div>
     )
 }

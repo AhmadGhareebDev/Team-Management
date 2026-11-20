@@ -21,10 +21,16 @@ export const buildEdgesForTask = (t: ProjectTask): Edge[] =>
     source: dep.dependsOn.id,
     target: t.id,
     type: "smoothstep",
-    markerEnd: { type: MarkerType.ArrowClosed, color: "var(--primary)", width: 16, height: 16 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      color: "var(--muted-foreground)",
+      width: 14,
+      height: 14,
+    },
     style: {
-      stroke: "var(--primary)",
-      strokeWidth: 2,
+      stroke: "var(--muted-foreground)",
+      strokeWidth: 1.5,
+      opacity: 0.55,
     },
   }))
 
