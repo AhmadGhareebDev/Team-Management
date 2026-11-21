@@ -6,22 +6,11 @@ import * as schema from "@/db/schemas";
 import { sendEmail } from "@/lib/mailer";
 import { imagekit } from "@/lib/imagekit";
 
-// DEBUG: log which database this server process is connected to
-const _dbUrl = process.env.DATABASE_URL ?? "";
-let _dbHost = "MISSING";
-try { _dbHost = new URL(_dbUrl).host } catch {}
-console.log("[AUTH DEBUG] server DATABASE_URL host:", _dbHost);
-console.log("[AUTH DEBUG] requireEmailVerification:", true);
-
 export const auth = betterAuth({
-    logger: {
-        level: "debug",
-        log: (level, message, ...args) => {
-            if (level === "error" || level === "warn") {
-                console.log(`[AUTH DEBUG][${level}]`, message, ...args);
-            }
-        },
-    },
+    trustedOrigins: [
+        process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+        ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+    ],
     database: drizzleAdapter(db, {
         provider: "pg",
         schema: schema,

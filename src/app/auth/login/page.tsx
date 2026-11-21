@@ -40,16 +40,6 @@ export default function Login() {
                ...data,        
             })
 
-            console.log("[AUTH DEBUG] signIn.email response:", {
-              email: data.email,
-              error: error ? {
-                code: error.code,
-                status: error.status,
-                message: error.message,
-                full: error,
-              } : null,
-            });
-
             if(!error) {
                toast.add({
                   timeout: 10000, 
@@ -65,7 +55,7 @@ export default function Login() {
                form.setError("root" , { message: "Invalid email or password." })
                return;
             }
-             if(error.status === 403) {
+             if(error.code === "EMAIL_NOT_VERIFIED") {
                 form.setError("email" , { message: "Please verify your email before logging in." })
                 setEmailUnverified(true)
                 return
