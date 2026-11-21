@@ -2,8 +2,6 @@ import { db } from "@/db"
 import { user } from "@/db/schemas"
 import { eq } from "drizzle-orm"
 
-export const dynamic = "force-dynamic"
-
 export async function GET() {
   const url = process.env.DATABASE_URL ?? ""
   let host = "MISSING"
