@@ -40,6 +40,16 @@ export default function Login() {
                ...data,        
             })
 
+            console.log("[AUTH DEBUG] signIn.email response:", {
+              email: data.email,
+              error: error ? {
+                code: error.code,
+                status: error.status,
+                message: error.message,
+                full: error,
+              } : null,
+            });
+
             if(!error) {
                toast.add({
                   timeout: 10000, 

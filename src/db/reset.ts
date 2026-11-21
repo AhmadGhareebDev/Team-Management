@@ -21,7 +21,7 @@ async function main() {
   console.log("")
   console.log("Recreate it with:")
   console.log("  npx drizzle-kit migrate")
-  console.log("  npm run demo:seed")
+  console.log("  npm run seed")
   console.log("")
 
   process.exit(0)

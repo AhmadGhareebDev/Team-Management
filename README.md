@@ -13,16 +13,15 @@ pagination that happens in the database rather than in memory.
 
 https://team-management-livid.vercel.app
 
-The seed script creates four accounts. The password is the same for all of
+The seed script creates three accounts. The password is the same for all of
 them, and the emails are deliberately fake domains so nothing can be sent to
-them.
+them. All three are marked as verified by the seed.
 
 | Email | Name | Role |
 | --- | --- | --- |
 | `owner@example.com` | Dana Ellis | Owner of both workspaces |
 | `admin@example.com` | Marco Silva | Admin |
 | `member@example.com` | Priya Nair | Member |
-| `tom@example.com` | Tom Becker | Member |
 
 Password: `Demo1234!`
 
@@ -140,13 +139,13 @@ enough.
 npm install
 cp .env.example .env      # then fill it in
 npx drizzle-kit migrate   # create the schema
-npm run demo:seed         # optional: a workspace with realistic data
+npm run seed              # optional: a workspace with realistic data
 npm run dev
 ```
 
 Open http://localhost:3000 and sign in with one of the [demo accounts](#demo).
 
-`npm run demo:seed` is idempotent: it wipes and recreates only the rows it
+`npm run seed` is idempotent: it wipes and recreates only the rows it
 owns (ids prefixed `ws_demo_`, `usr_demo_`, `tsk_demo_`), and never touches
 your own data.
 
@@ -158,7 +157,7 @@ your own data.
 | `npm run build` | Production build |
 | `npm test` | Vitest, five suites |
 | `npm run lint` | ESLint |
-| `npm run demo:seed` | Reset and reseed the demo workspaces |
+| `npm run seed` | Reset and reseed the demo workspaces |
 | `npm run db:reset` | Drop every table, including the migration journal |
 | `npx drizzle-kit generate` | Generate a migration from the schemas |
 | `npx drizzle-kit migrate` | Apply migrations |
